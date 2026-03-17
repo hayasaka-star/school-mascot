@@ -3,66 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChatGPT マスコット生成 (方法B)</title>
+    <title>対話型マスコット生成ツール</title>
     <style>
         body { font-family: sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
-        .card { max-width: 600px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        h2 { color: #10a37f; text-align: center; margin-top: 0; }
-        .key-input-area { background: #e6f4f1; padding: 15px; border-radius: 10px; border: 2px dashed #10a37f; margin-bottom: 20px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9em; }
-        input[type="password"], textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1em; }
-        button { width: 100%; padding: 15px; background: #10a37f; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; margin-top: 15px; transition: 0.2s; }
-        button:hover { background: #0d8a6a; }
+        .card { max-width: 650px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        h2 { color: #10a37f; text-align: center; margin-top: 0; border-bottom: 2px solid #10a37f; padding-bottom: 10px; }
+        .key-input-area { background: #e6f4f1; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9em; color: #555; }
+        input[type="password"], textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1em; margin-bottom: 10px; }
+        
+        .btn-main { width: 100%; padding: 15px; background: #10a37f; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-sub { width: 100%; padding: 15px; background: #3c4043; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; margin-top: 10px; }
         button:disabled { background: #ccc; cursor: not-allowed; }
-        #result { margin-top: 25px; text-align: center; display: none; }
-        img { max-width: 100%; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); background: #eee; }
-        .loading { display: none; color: #10a37f; font-weight: bold; text-align: center; margin-top: 15px; }
-        .error-msg { color: #d93025; background: #fce8e6; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 0.9em; display: none; }
+
+        #result { margin-top: 25px; text-align: center; }
+        img { max-width: 100%; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); background: #eee; }
+        .loading { display: none; color: #10a37f; font-weight: bold; text-align: center; margin: 15px 0; }
+        
+        /* 修正用エリアのスタイル */
+        .update-area { background: #fff3e0; padding: 15px; border-radius: 10px; border: 1px solid #ffb74d; margin-top: 20px; display: none; }
+        .history-box { font-size: 0.8em; color: #666; text-align: left; background: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>🎨 母校マスコット生成会議</h2>
+    <h2>🎨 対話型マスコット制作会議</h2>
     
     <div class="key-input-area">
-        <label>🔑 APIキーを入力（sk-...）</label>
-        <input type="password" id="api-key" placeholder="先生から教えてもらったキーを入力">
+        <label>🔑 APIキーを入力</label>
+        <input type="password" id="api-key" placeholder="sk-...">
     </div>
 
-    <div style="margin-bottom: 15px;">
-        <label>🏫 学校のイメージや伝統（日本語でOK）</label>
-        <textarea id="user-input" rows="4" placeholder="例：創立90周年、桜が有名、かわいい感じのキャラクター。"></textarea>
+    <div id="first-input-area">
+        <label>🏫 【1回目】学校のイメージを入力</label>
+        <textarea id="user-input" rows="3" placeholder="例：創立90周年、桜、明るい龍のキャラクター"></textarea>
+        <button id="send-btn" class="btn-main">ゼロからデザインを作る</button>
     </div>
 
-    <button id="send-btn">画像を生成する (DALL-E 3)</button>
-    
-    <div id="loading" class="loading">ChatGPTが描いています...<br><span style="font-size:0.8em; font-weight:normal;">(通常30秒ほどかかります)</span></div>
-    <div id="error-box" class="error-msg"></div>
+    <div id="loading" class="loading">ChatGPTが描いています...（約30秒）</div>
 
-    <div id="result">
-        <p><strong>✨ 完成したデザイン案：</strong></p>
+    <div id="result" style="display:none;">
+        <p><strong id="status-text">✨ デザイン案が完成しました！</strong></p>
         <div id="image-area"></div>
-        <p style="font-size:0.8em; color:gray; margin-top:10px;">※画像を右クリック（長押し）で保存できます</p>
+
+        <div class="update-area" id="update-area">
+            <div class="history-box">
+                <strong>今の設定：</strong> <span id="current-setting"></span>
+            </div>
+            <label>💬 【修正】もっとこうして！という指示</label>
+            <textarea id="update-input" rows="2" placeholder="例：もっと目を大きくして。リボンをつけて。"></textarea>
+            <button id="update-btn" class="btn-sub">今のデザインを修正する</button>
+        </div>
     </div>
 </div>
 
 <script>
-    document.getElementById('send-btn').onclick = async () => {
-        const key = document.getElementById('api-key').value.trim();
-        const input = document.getElementById('user-input').value.trim();
-        const btn = document.getElementById('send-btn');
+    let currentPrompt = ""; // 今までのプロンプトを保存しておく変数
+
+    async function generateImage(key, prompt, isUpdate = false) {
+        const btnMain = document.getElementById('send-btn');
+        const btnSub = document.getElementById('update-btn');
         const loading = document.getElementById('loading');
-        const result = document.getElementById('result');
-        const errorBox = document.getElementById('error-box');
-
-        if (!key) return alert("APIキーを入力してください");
-        if (!input) return alert("学校のイメージを入力してください");
-
-        btn.disabled = true;
+        
+        btnMain.disabled = true;
+        btnSub.disabled = true;
         loading.style.display = 'block';
-        result.style.display = 'none';
-        errorBox.style.display = 'none';
 
         try {
             const response = await fetch("https://api.openai.com/v1/images/generations", {
@@ -73,34 +79,52 @@
                 },
                 body: JSON.stringify({
                     model: "dall-e-3",
-                    // 日本語を活かしつつ、高品質なマスコットにするためのプロンプト
-                    prompt: `Create a professional school mascot character based on: ${input}. High-quality digital art, cute 3D render style, white background, masterpiece, vibrant colors.`,
-                    n: 1,
-                    size: "1024x1024"
+                    // 高品質なマスコットにするための基本指示をセット
+                    prompt: `Professional mascot character design: ${prompt}. Cute 3D style, white background, masterpiece, vibrant colors.`,
+                    n: 1, size: "1024x1024"
                 })
             });
 
             const data = await response.json();
-            
-            if (data.error) {
-                // 具体的なエラー原因を日本語で表示
-                let msg = data.error.message;
-                if (msg.includes("billing")) msg = "【エラー】残高不足です。OpenAIに5ドル以上のチャージが必要です。";
-                if (msg.includes("invalid_api_key")) msg = "【エラー】APIキーが正しくありません。コピーミスがないか確認してください。";
-                throw new Error(msg);
-            }
+            if (data.error) throw new Error(data.error.message);
 
             const imageUrl = data.data[0].url;
             document.getElementById('image-area').innerHTML = `<img src="${imageUrl}" alt="Mascot">`;
-            result.style.display = 'block';
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('update-area').style.display = 'block';
+            document.getElementById('status-text').innerText = isUpdate ? "✨ デザインを修正しました！" : "✨ デザイン案が完成しました！";
+            
+            // 現在の設定を画面に表示
+            currentPrompt = prompt;
+            document.getElementById('current-setting').innerText = currentPrompt;
+            document.getElementById('update-input').value = ""; // 入力欄を空にする
 
         } catch (e) {
-            errorBox.innerText = e.message;
-            errorBox.style.display = 'block';
+            alert("エラーが発生しました：\n" + e.message);
         } finally {
-            btn.disabled = false;
+            btnMain.disabled = false;
+            btnSub.disabled = false;
             loading.style.display = 'none';
         }
+    }
+
+    // 新規作成ボタン
+    document.getElementById('send-btn').onclick = () => {
+        const key = document.getElementById('api-key').value.trim();
+        const input = document.getElementById('user-input').value.trim();
+        if (!key || !input) return alert("キーとイメージを入力してね");
+        generateImage(key, input, false);
+    };
+
+    // 修正ボタン
+    document.getElementById('update-btn').onclick = () => {
+        const key = document.getElementById('api-key').value.trim();
+        const updateInput = document.getElementById('update-input').value.trim();
+        if (!updateInput) return alert("修正したい内容を入力してね");
+        
+        // 今までの指示に、新しい指示を付け加える（これで「修正」を表現）
+        const newFullPrompt = `${currentPrompt}。さらに追加の指示：${updateInput}`;
+        generateImage(key, newFullPrompt, true);
     };
 </script>
 
