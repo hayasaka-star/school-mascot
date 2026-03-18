@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>対話型マスコット生成ツール</title>
+    <title>対話型マスコット生成ツール (gpt-image-1対応版)</title>
     <style>
         body { font-family: sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
         .card { max-width: 650px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
@@ -20,7 +20,6 @@
         img { max-width: 100%; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); background: #eee; }
         .loading { display: none; color: #10a37f; font-weight: bold; text-align: center; margin: 15px 0; }
         
-        /* 修正用エリアのスタイル */
         .update-area { background: #fff3e0; padding: 15px; border-radius: 10px; border: 1px solid #ffb74d; margin-top: 20px; display: none; }
         .history-box { font-size: 0.8em; color: #666; text-align: left; background: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
     </style>
@@ -41,7 +40,7 @@
         <button id="send-btn" class="btn-main">ゼロからデザインを作る</button>
     </div>
 
-    <div id="loading" class="loading">ChatGPTが描いています...（約30秒）</div>
+    <div id="loading" class="loading">gpt-image-1が描いています...（約30秒）</div>
 
     <div id="result" style="display:none;">
         <p><strong id="status-text">✨ デザイン案が完成しました！</strong></p>
@@ -59,7 +58,7 @@
 </div>
 
 <script>
-    let currentPrompt = ""; // 今までのプロンプトを保存しておく変数
+    let currentPrompt = "";
 
     async function generateImage(key, prompt, isUpdate = false) {
         const btnMain = document.getElementById('send-btn');
@@ -78,10 +77,11 @@
                     "Authorization": `Bearer ${key}`
                 },
                 body: JSON.stringify({
-                    model: "dall-e-3",
-                    // 高品質なマスコットにするための基本指示をセット
+                    // モデルを gpt-image-1 に変更
+                    model: "gpt-image-1",
                     prompt: `Professional mascot character design: ${prompt}. Cute 3D style, white background, masterpiece, vibrant colors.`,
-                    n: 1, size: "1024x1024"
+                    n: 1, 
+                    size: "1024x1024"
                 })
             });
 
@@ -94,10 +94,9 @@
             document.getElementById('update-area').style.display = 'block';
             document.getElementById('status-text').innerText = isUpdate ? "✨ デザインを修正しました！" : "✨ デザイン案が完成しました！";
             
-            // 現在の設定を画面に表示
             currentPrompt = prompt;
             document.getElementById('current-setting').innerText = currentPrompt;
-            document.getElementById('update-input').value = ""; // 入力欄を空にする
+            document.getElementById('update-input').value = ""; 
 
         } catch (e) {
             alert("エラーが発生しました：\n" + e.message);
@@ -108,7 +107,6 @@
         }
     }
 
-    // 新規作成ボタン
     document.getElementById('send-btn').onclick = () => {
         const key = document.getElementById('api-key').value.trim();
         const input = document.getElementById('user-input').value.trim();
@@ -116,13 +114,11 @@
         generateImage(key, input, false);
     };
 
-    // 修正ボタン
     document.getElementById('update-btn').onclick = () => {
         const key = document.getElementById('api-key').value.trim();
         const updateInput = document.getElementById('update-input').value.trim();
         if (!updateInput) return alert("修正したい内容を入力してね");
         
-        // 今までの指示に、新しい指示を付け加える（これで「修正」を表現）
         const newFullPrompt = `${currentPrompt}。さらに追加の指示：${updateInput}`;
         generateImage(key, newFullPrompt, true);
     };
