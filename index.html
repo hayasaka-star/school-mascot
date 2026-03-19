@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>マスコットメーカー🎨</title>
+  <title>マスコットメーカー🎨（完成版）</title>
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
@@ -13,13 +13,7 @@
       margin: 0 auto;
       padding: 20px;
     }
-
-    h1 {
-      text-align: center;
-      font-size: 28px;
-      margin-bottom: 10px;
-    }
-
+    h1 { text-align: center; }
     .panel {
       background: rgba(255,255,255,0.1);
       backdrop-filter: blur(10px);
@@ -27,64 +21,68 @@
       padding: 16px;
       margin-bottom: 20px;
     }
-
     textarea, input, select {
       width: 100%;
       padding: 10px;
       border-radius: 8px;
       border: none;
       margin-top: 8px;
-      font-size: 14px;
     }
-
     button {
       width: 100%;
       padding: 12px;
-      margin-top: 12px;
+      margin-top: 10px;
       border: none;
       border-radius: 10px;
-      font-size: 16px;
       background: #ff7eb3;
       color: white;
       font-weight: bold;
-      transition: 0.2s;
+      cursor: pointer;
     }
-
-    button:hover {
-      transform: scale(1.05);
-      background: #ff5c9c;
+    button:hover { transform: scale(1.05); }
+    .quick-buttons button {
+      width: auto;
+      margin-right: 8px;
+      margin-top: 8px;
+      padding: 8px 12px;
     }
-
-    button:disabled {
-      opacity: 0.5;
-    }
-
-    #status {
-      background: rgba(0,0,0,0.2);
-      padding: 10px;
-      border-radius: 8px;
-      margin-top: 10px;
-      font-size: 13px;
-    }
-
-    img {
-      width: 100%;
-      border-radius: 12px;
-      margin-top: 10px;
-    }
+    #status { margin-top: 10px; }
+    img { width: 100%; border-radius: 12px; margin-top: 10px; }
   </style>
 </head>
 <body>
-  <h1>🎨 マスコットメーカー</h1>
+  <h1>🎨 マスコットメーカー（完成版）</h1>
 
   <div class="panel">
     <label>APIキー</label>
     <input type="password" id="apiKey" placeholder="sk-..." />
 
-    <label>キャラのイメージ（任意）</label>
-    <textarea id="userPrompt" placeholder="例：元気な、スポーツが得意、青色ベース"></textarea>
+    <label>キャラのイメージ</label>
+    <textarea id="userPrompt" placeholder="例：元気、青色、スポーツ得意"></textarea>
 
-    <button id="generateBtn">マスコット生成！</button>
+    <button id="generateBtn">新規生成</button>
+  </div>
+
+  <div class="panel">
+    <label>ワンタップ修正</label>
+    <div class="quick-buttons">
+      <button onclick="quickEdit('もっとかわいく')">かわいい</button>
+      <button onclick="quickEdit('もっとかっこよく')">かっこいい</button>
+      <button onclick="quickEdit('笑顔にして')">笑顔</button>
+      <button onclick="quickEdit('青色ベースにして')">青</button>
+      <button onclick="quickEdit('赤色ベースにして')">赤</button>
+    </div>
+
+    <label>自由修正</label>
+    <textarea id="editPrompt" placeholder="例：目を大きくして"></textarea>
+
+    <button id="editBtn" disabled>この画像を修正</button>
+  </div>
+
+  <div class="panel">
+    <label>プロンプト履歴</label>
+    <select id="history"></select>
+    <button onclick="reusePrompt()">このプロンプトを使う</button>
   </div>
 
   <div id="status">待機中</div>
@@ -97,72 +95,116 @@
 <script>
 const apiKeyEl = document.getElementById("apiKey");
 const userPromptEl = document.getElementById("userPrompt");
+const editPromptEl = document.getElementById("editPrompt");
 const generateBtn = document.getElementById("generateBtn");
+const editBtn = document.getElementById("editBtn");
 const statusEl = document.getElementById("status");
 const resultEl = document.getElementById("result");
+const historyEl = document.getElementById("history");
 
-// ★ マスコット固定プロンプト
-const BASE_PROMPT = "高校のマスコットキャラクター、ゆるキャラ風、かわいい、ポップ、SNS映え、シンプルで親しみやすいデザイン";
+let currentImageDataUrl = null;
+let promptHistory = [];
 
-function setStatus(msg) {
-  statusEl.textContent = msg;
-}
+const BASE_PROMPT = "高校のマスコットキャラクター、ゆるキャラ風、かわいい、ポップ、SNS映え";
 
-function showImage(dataUrl) {
+function setStatus(msg){ statusEl.textContent = msg; }
+
+function showImage(dataUrl){
   resultEl.innerHTML = "";
   const img = document.createElement("img");
   img.src = dataUrl;
   resultEl.appendChild(img);
 }
 
-function base64ToDataUrl(base64) {
-  return `data:image/png;base64,${base64}`;
+function base64ToDataUrl(b64){ return `data:image/png;base64,${b64}`; }
+
+async function dataUrlToBlob(dataUrl){
+  const res = await fetch(dataUrl);
+  return await res.blob();
 }
 
-async function generateImage() {
+function addHistory(prompt){
+  promptHistory.push(prompt);
+  const option = document.createElement("option");
+  option.text = prompt;
+  historyEl.add(option);
+}
+
+function reusePrompt(){
+  userPromptEl.value = historyEl.value;
+}
+
+async function generateImage(){
   const apiKey = apiKeyEl.value.trim();
-  const userPrompt = userPromptEl.value.trim();
+  if(!apiKey){ setStatus("APIキー入れて"); return; }
 
-  if (!apiKey) {
-    setStatus("APIキーを入力して！");
-    return;
-  }
+  const fullPrompt = BASE_PROMPT + "。" + userPromptEl.value;
+  addHistory(fullPrompt);
 
-  setStatus("生成中...ちょっと待ってね");
+  setStatus("生成中...");
 
-  try {
-    const response = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-image-1",
-        prompt: BASE_PROMPT + "。" + userPrompt,
-        size: "1024x1024"
-      })
-    });
+  const res = await fetch("https://api.openai.com/v1/images/generations",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":`Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model:"gpt-image-1",
+      prompt: fullPrompt,
+      size:"1024x1024"
+    })
+  });
 
-    const data = await response.json();
+  const data = await res.json();
+  if(!res.ok){ setStatus(JSON.stringify(data)); return; }
 
-    if (!response.ok) {
-      setStatus("エラー: " + JSON.stringify(data));
-      return;
-    }
+  const b64 = data.data[0].b64_json;
+  currentImageDataUrl = base64ToDataUrl(b64);
+  showImage(currentImageDataUrl);
 
-    const b64 = data.data[0].b64_json;
-    const imgUrl = base64ToDataUrl(b64);
-
-    showImage(imgUrl);
-    setStatus("完成！✨ もう一回作るのもOK！");
-
-  } catch (e) {
-    setStatus("通信エラー: " + e.message);
-  }
+  editBtn.disabled = false;
+  setStatus("生成完了！");
 }
 
-generateBtn.addEventListener("click", generateImage);
+async function editImage(promptText){
+  const apiKey = apiKeyEl.value.trim();
+  if(!currentImageDataUrl){ setStatus("先に生成して"); return; }
+
+  const finalPrompt = BASE_PROMPT + "。" + promptText;
+  addHistory(finalPrompt);
+
+  setStatus("修正中...");
+
+  const blob = await dataUrlToBlob(currentImageDataUrl);
+
+  const form = new FormData();
+  form.append("model","gpt-image-1");
+  form.append("prompt", finalPrompt);
+  form.append("image", blob, "img.png");
+
+  const res = await fetch("https://api.openai.com/v1/images/edits",{
+    method:"POST",
+    headers:{ "Authorization":`Bearer ${apiKey}` },
+    body: form
+  });
+
+  const data = await res.json();
+  if(!res.ok){ setStatus(JSON.stringify(data)); return; }
+
+  const b64 = data.data[0].b64_json;
+  currentImageDataUrl = base64ToDataUrl(b64);
+  showImage(currentImageDataUrl);
+
+  setStatus("修正完了！");
+}
+
+function quickEdit(text){
+  editImage(text);
+}
+
+generateBtn.onclick = generateImage;
+editBtn.onclick = () => editImage(editPromptEl.value);
 </script>
 </body>
 </html>
