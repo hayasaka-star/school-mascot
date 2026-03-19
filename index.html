@@ -51,21 +51,30 @@
   </style>
 </head>
 <body>
-  <h1>🎨 マスコットメーカー</h1>
+  <h1>🎨 マスコットメーカー（完成版）</h1>
 
   <div class="panel">
     <label>APIキー</label>
     <input type="password" id="apiKey" placeholder="sk-..." />
 
-    <label>母校のイメージ</label>
-    <textarea id="userPrompt" placeholder="例：スポーツ得意、文武両道、歴史がある"></textarea>
+    <label>キャラのイメージ</label>
+    <textarea id="userPrompt" placeholder="例：元気、青色、スポーツ得意"></textarea>
 
     <button id="generateBtn">新規生成</button>
   </div>
 
   <div class="panel">
+    <label>ワンタップ修正</label>
+    <div class="quick-buttons">
+      <button onclick="quickEdit('もっとかわいく')">かわいい</button>
+      <button onclick="quickEdit('もっとかっこよく')">かっこいい</button>
+      <button onclick="quickEdit('笑顔にして')">笑顔</button>
+      <button onclick="quickEdit('青色ベースにして')">青</button>
+      <button onclick="quickEdit('赤色ベースにして')">赤</button>
+    </div>
+
     <label>自由修正</label>
-    <textarea id="editPrompt" placeholder="例：もう少し目を大きくして"></textarea>
+    <textarea id="editPrompt" placeholder="例：目を大きくして"></textarea>
 
     <button id="editBtn" disabled>この画像を修正</button>
   </div>
@@ -190,9 +199,7 @@ async function editImage(promptText){
   setStatus("修正完了！");
 }
 
-function quickEdit(text){
-  editImage(text);
-}
+
 
 generateBtn.onclick = generateImage;
 editBtn.onclick = () => editImage(editPromptEl.value);
