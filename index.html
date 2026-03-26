@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>母校マスコット生成会議🎨</title>
+  <title>母校マスコット生成会議🎨（分岐履歴対応）</title>
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
@@ -62,7 +62,7 @@
   </style>
 </head>
 <body>
-  <h1>🎨母校マスコット生成会議</h1>
+  <h1>🎨母校マスコット生成会議（分岐履歴）</h1>
 
   <div class="panel">
     <label>APIキー</label>
@@ -90,7 +90,7 @@
   </div>
 
   <div class="panel">
-    <h2>履歴（クリックで戻る）</h2>
+    <h2>履歴（分岐含む）</h2>
     <div id="historyThumbs" class="thumbs"></div>
   </div>
 
@@ -108,7 +108,8 @@ const resultEl = document.getElementById("result");
 const historyEl = document.getElementById("historyThumbs");
 
 let currentImageDataUrl = null;
-let imageHistory = [];
+let imageHistory = []; // 全履歴（削除しない）
+let currentIndex = -1; // 今どこ見てるか
 
 const BASE_PROMPT = "高校のマスコットキャラクター";
 
@@ -128,13 +129,14 @@ function renderHistory(){
     const img = document.createElement("img");
     img.src = imgUrl;
 
-    if(imgUrl === currentImageDataUrl){
+    if(index === currentIndex){
       img.classList.add("active");
     }
 
     img.onclick = () => {
-      currentImageDataUrl = imgUrl;
-      showImage(imgUrl);
+      currentIndex = index;
+      currentImageDataUrl = imageHistory[currentIndex];
+      showImage(currentImageDataUrl);
       setStatus("履歴から選択");
       renderHistory();
     };
@@ -142,14 +144,16 @@ function renderHistory(){
     historyEl.appendChild(img);
   });
 
-  undoBtn.disabled = imageHistory.length <= 1;
+  undoBtn.disabled = currentIndex <= 0;
 }
 
 function addToHistory(dataUrl){
   imageHistory.push(dataUrl);
+  currentIndex = imageHistory.length - 1;
 
   if(imageHistory.length > MAX_HISTORY){
     imageHistory.shift();
+    currentIndex--;
   }
 
   renderHistory();
@@ -225,22 +229,22 @@ async function editImage(promptText){
   addToHistory(currentImageDataUrl);
   showImage(currentImageDataUrl);
 
-  setStatus("修正完了！");
+  setStatus("修正完了！（分岐保存）");
 }
 
 undoBtn.onclick = () => {
-  if(imageHistory.length <= 1){
+  if(currentIndex <= 0){
     setStatus("これ以上戻れない");
     return;
   }
 
-  imageHistory.pop();
-  currentImageDataUrl = imageHistory[imageHistory.length - 1];
+  currentIndex--;
+  currentImageDataUrl = imageHistory[currentIndex];
 
   showImage(currentImageDataUrl);
   renderHistory();
 
-  setStatus("1つ前に戻した");
+  setStatus("1つ前に戻した（分岐保持）");
 };
 
 generateBtn.onclick = generateImage;
