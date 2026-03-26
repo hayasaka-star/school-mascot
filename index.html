@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>母校マスコット生成会議🎨（分岐履歴対応）</title>
+  <title>母校マスコット生成会議🎨（分岐履歴＋削除対応）</title>
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
@@ -49,20 +49,36 @@
       gap: 8px;
       margin-top: 10px;
     }
-    .thumbs img {
+    .thumb-item {
+      position: relative;
+    }
+    .thumb-item img {
       width: 80px;
       height: 80px;
       object-fit: cover;
       cursor: pointer;
       border: 2px solid transparent;
     }
-    .thumbs img.active {
+    .thumb-item img.active {
       border: 2px solid #fff;
+    }
+    .delete-btn {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      font-size: 12px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>🎨母校マスコット生成会議（分岐履歴）</h1>
+  <h1>🎨母校マスコット生成会議（分岐履歴＋削除）</h1>
 
   <div class="panel">
     <label>APIキー</label>
@@ -90,12 +106,12 @@
   </div>
 
   <div class="panel">
-    <h2>履歴（分岐含む）</h2>
+    <h2>履歴（クリックで切替・×で削除）</h2>
     <div id="historyThumbs" class="thumbs"></div>
   </div>
 
 <script>
-const MAX_HISTORY = 10;
+const MAX_HISTORY = 20;
 
 const apiKeyEl = document.getElementById("apiKey");
 const userPromptEl = document.getElementById("userPrompt");
@@ -108,8 +124,8 @@ const resultEl = document.getElementById("result");
 const historyEl = document.getElementById("historyThumbs");
 
 let currentImageDataUrl = null;
-let imageHistory = []; // 全履歴（削除しない）
-let currentIndex = -1; // 今どこ見てるか
+let imageHistory = [];
+let currentIndex = -1;
 
 const BASE_PROMPT = "高校のマスコットキャラクター";
 
@@ -126,6 +142,9 @@ function renderHistory(){
   historyEl.innerHTML = "";
 
   imageHistory.forEach((imgUrl, index) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "thumb-item";
+
     const img = document.createElement("img");
     img.src = imgUrl;
 
@@ -141,7 +160,38 @@ function renderHistory(){
       renderHistory();
     };
 
-    historyEl.appendChild(img);
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "×";
+    delBtn.className = "delete-btn";
+
+    delBtn.onclick = (e) => {
+      e.stopPropagation();
+
+      imageHistory.splice(index, 1);
+
+      if(currentIndex >= index){
+        currentIndex--;
+      }
+
+      if(currentIndex < 0 && imageHistory.length > 0){
+        currentIndex = 0;
+      }
+
+      currentImageDataUrl = imageHistory[currentIndex] || null;
+
+      if(currentImageDataUrl){
+        showImage(currentImageDataUrl);
+      } else {
+        resultEl.innerHTML = "まだ画像はありません";
+      }
+
+      renderHistory();
+      setStatus("履歴を削除");
+    };
+
+    wrapper.appendChild(img);
+    wrapper.appendChild(delBtn);
+    historyEl.appendChild(wrapper);
   });
 
   undoBtn.disabled = currentIndex <= 0;
@@ -244,7 +294,7 @@ undoBtn.onclick = () => {
   showImage(currentImageDataUrl);
   renderHistory();
 
-  setStatus("1つ前に戻した（分岐保持）");
+  setStatus("1つ前に戻した");
 };
 
 generateBtn.onclick = generateImage;
