@@ -1,84 +1,3 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>母校マスコット生成会議🎨</title>
-  <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      color: #fff;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    h1 { text-align: center; }
-    .panel {
-      background: rgba(255,255,255,0.1);
-      backdrop-filter: blur(10px);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 20px;
-    }
-    textarea, input, select {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-      margin-top: 8px;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      border: none;
-      border-radius: 10px;
-      background: #ff7eb3;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    button:hover { transform: scale(1.05); }
-    .quick-buttons button {
-      width: auto;
-      margin-right: 8px;
-      margin-top: 8px;
-      padding: 8px 12px;
-    }
-    #status { margin-top: 10px; }
-    img { width: 100%; border-radius: 12px; margin-top: 10px; }
-  </style>
-</head>
-<body>
-  <h1>🎨母校マスコット生成会議</h1>
-
-  <div class="panel">
-    <label>APIキー</label>
-    <input type="password" id="apiKey" placeholder="sk-..." />
-
-    <label>母校のイメージ</label>
-    <textarea id="userPrompt" placeholder="例：文武両道、京都、犬、かわいい"></textarea>
-
-    <button id="generateBtn">新規生成</button>
-  </div>
-
-  <div class="panel">
-    <label>追加のイメージ</label>
-    <textarea id="editPrompt" placeholder="例：もっと目を大きくして"></textarea>
-
-    <button id="editBtn" disabled>この画像を修正</button>
-  </div>
-
-  
-
-  <div id="status">待機中</div>
-
-  <div class="panel">
-    <h2>生成結果</h2>
-    <div id="result">まだ画像はありません</div>
-  </div>
-
 <script>
 const apiKeyEl = document.getElementById("apiKey");
 const userPromptEl = document.getElementById("userPrompt");
@@ -88,19 +7,52 @@ const editBtn = document.getElementById("editBtn");
 const statusEl = document.getElementById("status");
 const resultEl = document.getElementById("result");
 
+// --- ★変更点1: 画像の履歴を保存する配列を作る ---
+// let currentImageDataUrl = null; <-- これを消して、下を追加
+let imageHistory = []; 
+const MAX_HISTORY = 5; // 履歴を何枚まで持つか（メモリ節約のため）
 
-let currentImageDataUrl = null;
+// --- ★変更点2: 「元に戻す」ボタンを動的に作る ---
+const undoBtn = document.createElement("button");
+undoBtn.textContent = "↩ 修正を取り消す（元に戻す）";
+undoBtn.style.background = "#6c757d"; // 色を変える
+undoBtn.style.display = "none";    // 最初は隠しておく
+editBtn.parentNode.insertBefore(undoBtn, editBtn.nextSibling); // 修正ボタンの後ろに追加
 
 
 const BASE_PROMPT = "高校のマスコットキャラクター";
 
 function setStatus(msg){ statusEl.textContent = msg; }
 
-function showImage(dataUrl){
+// --- ★変更点3: 画像を表示し、Undoボタンの状態を管理する関数 ---
+function updateDisplay(){
   resultEl.innerHTML = "";
-  const img = document.createElement("img");
-  img.src = dataUrl;
-  resultEl.appendChild(img);
+  if(imageHistory.length > 0){
+    // 最新の画像を表示
+    const currentDataUrl = imageHistory[imageHistory.length - 1];
+    const img = document.createElement("img");
+    img.src = currentDataUrl;
+    resultEl.appendChild(img);
+    
+    // ボタンの制御
+    editBtn.disabled = false;
+    // 履歴が2枚以上あれば、Undoボタンを表示
+    undoBtn.style.display = imageHistory.length > 1 ? "block" : "none";
+  } else {
+    resultEl.textContent = "まだ画像はありません";
+    editBtn.disabled = true;
+    undoBtn.style.display = "none";
+  }
+}
+
+// 履歴に新しい画像を追加する関数
+function addHistory(dataUrl){
+  imageHistory.push(dataUrl);
+  // 履歴が増えすぎたら古い順に消す
+  if(imageHistory.length > MAX_HISTORY){
+    imageHistory.shift(); 
+  }
+  updateDisplay();
 }
 
 function base64ToDataUrl(b64){ return `data:image/png;base64,${b64}`; }
@@ -110,79 +62,96 @@ async function dataUrlToBlob(dataUrl){
   return await res.blob();
 }
 
-
-
-
-
 async function generateImage(){
   const apiKey = apiKeyEl.value.trim();
   if(!apiKey){ setStatus("APIキー入れて"); return; }
 
   const fullPrompt = BASE_PROMPT + "。" + userPromptEl.value;
   
-
   setStatus("生成中...");
 
-  const res = await fetch("https://api.openai.com/v1/images/generations",{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      "Authorization":`Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model:"gpt-image-1",
-      prompt: fullPrompt,
-      size:"1024x1024"
-    })
-  });
+  try {
+    const res = await fetch("https://api.openai.com/v1/images/generations",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":`Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model:"gpt-image-1",
+        prompt: fullPrompt,
+        size:"1024x1024",
+        response_format: "b64_json" // base64で受け取る
+      })
+    });
 
-  const data = await res.json();
-  if(!res.ok){ setStatus(JSON.stringify(data)); return; }
+    const data = await res.json();
+    if(!res.ok){ throw new Error(JSON.stringify(data)); }
 
-  const b64 = data.data[0].b64_json;
-  currentImageDataUrl = base64ToDataUrl(b64);
-  showImage(currentImageDataUrl);
+    const b64 = data.data[0].b64_json;
+    const newDataUrl = base64ToDataUrl(b64);
 
-  editBtn.disabled = false;
-  setStatus("生成完了！");
+    // --- ★変更点4: 履歴の初期化と追加 ---
+    imageHistory = []; // 新規生成なので履歴をリセット
+    addHistory(newDataUrl);
+
+    setStatus("生成完了！");
+  } catch (e) {
+    setStatus("エラー: " + e.message);
+  }
 }
 
 async function editImage(promptText){
   const apiKey = apiKeyEl.value.trim();
-  if(!currentImageDataUrl){ setStatus("先に生成して"); return; }
+  // --- ★変更点5: 履歴の一番新しい画像を使う ---
+  if(imageHistory.length === 0){ setStatus("先に生成して"); return; }
+  const currentImageDataUrl = imageHistory[imageHistory.length - 1];
+
+  if(!promptText){ setStatus("修正指示を入れて"); return; }
 
   const finalPrompt = BASE_PROMPT + "。" + promptText;
   
-
   setStatus("修正中...");
 
-  const blob = await dataUrlToBlob(currentImageDataUrl);
+  try {
+    const blob = await dataUrlToBlob(currentImageDataUrl);
 
-  const form = new FormData();
-  form.append("model","gpt-image-1");
-  form.append("prompt", finalPrompt);
-  form.append("image", blob, "img.png");
+    const form = new FormData();
+    form.append("model","gpt-image-1");
+    form.append("prompt", finalPrompt);
+    form.append("image", blob, "img.png");
+    form.append("response_format", "b64_json"); // base64で受け取る
 
-  const res = await fetch("https://api.openai.com/v1/images/edits",{
-    method:"POST",
-    headers:{ "Authorization":`Bearer ${apiKey}` },
-    body: form
-  });
+    const res = await fetch("https://api.openai.com/v1/images/edits",{
+      method:"POST",
+      headers:{ "Authorization":`Bearer ${apiKey}` },
+      body: form
+    });
 
-  const data = await res.json();
-  if(!res.ok){ setStatus(JSON.stringify(data)); return; }
+    const data = await res.json();
+    if(!res.ok){ throw new Error(JSON.stringify(data)); }
 
-  const b64 = data.data[0].b64_json;
-  currentImageDataUrl = base64ToDataUrl(b64);
-  showImage(currentImageDataUrl);
+    const b64 = data.data[0].b64_json;
+    const newDataUrl = base64ToDataUrl(b64);
 
-  setStatus("修正完了！");
+    // --- ★変更点6: 修正画像を履歴に追加 ---
+    addHistory(newDataUrl);
+
+    setStatus("修正完了！");
+  } catch (e) {
+    setStatus("修正エラー: " + e.message);
+  }
 }
 
-
+// --- ★変更点7: Undoボタンの処理 ---
+undoBtn.onclick = () => {
+  if(imageHistory.length > 1){
+    imageHistory.pop(); // 最新の（気に入らない）画像を捨てる
+    updateDisplay();    // ひとつ前の画像が表示される
+    setStatus("修正を取り消しました。");
+  }
+};
 
 generateBtn.onclick = generateImage;
 editBtn.onclick = () => editImage(editPromptEl.value);
 </script>
-</body>
-</html>
