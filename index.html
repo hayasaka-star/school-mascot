@@ -3,97 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>母校マスコット生成会議🎨 (Undo機能付き)</title>
+  <title>母校マスコット生成会議🎨</title>
   <style>
-    body {
-      font-family: "Segoe UI", "Meiryo", sans-serif;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      color: #fff;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 20px;
-      line-height: 1.6;
-    }
-    h1 { text-align: center; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
-    .panel {
-      background: rgba(255,255,255,0.15);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-radius: 16px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-    }
+    body { font-family: "Segoe UI", sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; max-width: 900px; margin: 0 auto; padding: 20px; }
+    h1 { text-align: center; }
+    .panel { background: rgba(255,255,255,0.15); backdrop-filter: blur(12px); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
     label { font-weight: bold; display: block; margin-top: 10px; }
-    textarea, input {
-      width: 100%;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.3);
-      margin-top: 8px;
-      box-sizing: border-box;
-      background: rgba(255,255,255,0.9);
-      color: #333;
-    }
-    button {
-      width: 100%;
-      padding: 14px;
-      margin-top: 15px;
-      border: none;
-      border-radius: 10px;
-      background: #ff7eb3;
-      color: white;
-      font-weight: bold;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255,126,179,0.4); }
-    button:active:not(:disabled) { transform: translateY(0); }
-    button:disabled { background: #999; cursor: not-allowed; opacity: 0.6; }
-
-    #undoBtn { background: #6c757d; margin-top: 10px; display: none; }
-    #status { 
-      margin: 10px 0; 
-      padding: 10px; 
-      border-radius: 8px; 
-      text-align: center; 
-      font-weight: bold;
-      background: rgba(0,0,0,0.2);
-    }
-    #result img { width: 100%; border-radius: 12px; margin-top: 15px; display: block; }
-    .empty-msg { text-align: center; padding: 40px; color: rgba(255,255,255,0.6); border: 2px dashed rgba(255,255,255,0.3); border-radius: 12px; }
+    textarea, input { width: 100%; padding: 12px; border-radius: 8px; border: none; margin-top: 8px; box-sizing: border-box; }
+    button { width: 100%; padding: 14px; margin-top: 15px; border: none; border-radius: 10px; background: #ff7eb3; color: white; font-weight: bold; cursor: pointer; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    #undoBtn { background: #6c757d; display: none; }
+    #status { margin: 10px 0; text-align: center; font-weight: bold; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; }
+    #result img { width: 100%; border-radius: 12px; margin-top: 15px; }
   </style>
 </head>
 <body>
   <h1>🎨母校マスコット生成会議</h1>
 
   <div class="panel">
-    <label>OpenAI APIキー</label>
+    <label>APIキー</label>
     <input type="password" id="apiKey" placeholder="sk-..." />
-
-    <label>母校のイメージ（新規作成）</label>
-    <textarea id="userPrompt" rows="3" placeholder="例：文武両道、伝統ある京都の高校、柴犬のキャラクター、かわいい、スクールカラーは紺色"></textarea>
-
-    <button id="generateBtn">✨ 新規キャラクターを生成</button>
+    <label>母校のイメージ</label>
+    <textarea id="userPrompt" rows="3" placeholder="例：京都、柴犬、かわいい"></textarea>
+    <button id="generateBtn">✨ 新規生成</button>
   </div>
 
   <div class="panel">
-    <label>デザインの修正指示</label>
-    <textarea id="editPrompt" rows="2" placeholder="例：もっと目を大きくして、手に筆を持たせて、表情を笑顔にして"></textarea>
-
-    <button id="editBtn" disabled>🪄 この画像を修正する</button>
-    <button id="undoBtn">↩ 修正を取り消す（元に戻す）</button>
+    <label>修正指示</label>
+    <textarea id="editPrompt" rows="2" placeholder="例：青い帽子をかぶせて"></textarea>
+    <button id="editBtn" disabled>🪄 修正する</button>
+    <button id="undoBtn">↩ 元に戻す</button>
   </div>
 
-  <div id="status">準備完了（APIキーを入力してください）</div>
-
-  <div class="panel">
-    <h2>生成結果</h2>
-    <div id="result">
-      <div class="empty-msg">まだ画像はありません</div>
-    </div>
-  </div>
+  <div id="status">待機中</div>
+  <div class="panel" id="result">まだ画像はありません</div>
 
 <script>
 const apiKeyEl = document.getElementById("apiKey");
@@ -105,44 +48,26 @@ const undoBtn = document.getElementById("undoBtn");
 const statusEl = document.getElementById("status");
 const resultEl = document.getElementById("result");
 
-// 画像履歴を管理する配列（最大5枚まで）
 let imageHistory = [];
 const MAX_HISTORY = 5;
-const BASE_PROMPT = "高校のマスコットキャラクター。";
+const BASE_PROMPT = "School mascot character. ";
 
 function setStatus(msg) { statusEl.textContent = msg; }
 
-// 画面表示を更新する関数
 function updateUI() {
   resultEl.innerHTML = "";
-  
   if (imageHistory.length > 0) {
-    // 履歴の最新（配列の最後）を表示
-    const currentDataUrl = imageHistory[imageHistory.length - 1];
     const img = document.createElement("img");
-    img.src = currentDataUrl;
+    img.src = imageHistory[imageHistory.length - 1];
     resultEl.appendChild(img);
-
     editBtn.disabled = false;
-    // 2枚以上履歴があれば「戻る」ボタンを表示
     undoBtn.style.display = imageHistory.length > 1 ? "block" : "none";
   } else {
-    resultEl.innerHTML = '<div class="empty-msg">まだ画像はありません</div>';
+    resultEl.textContent = "まだ画像はありません";
     editBtn.disabled = true;
     undoBtn.style.display = "none";
   }
 }
-
-// 履歴に画像を追加
-function addHistory(dataUrl) {
-  imageHistory.push(dataUrl);
-  if (imageHistory.length > MAX_HISTORY) {
-    imageHistory.shift(); // 古い履歴を削除
-  }
-  updateUI();
-}
-
-function base64ToDataUrl(b64) { return `data:image/png;base64,${b64}`; }
 
 async function dataUrlToBlob(dataUrl) {
   const res = await fetch(dataUrl);
@@ -150,61 +75,41 @@ async function dataUrlToBlob(dataUrl) {
 }
 
 // 1. 新規生成
-async function generateImage() {
+generateBtn.onclick = async () => {
   const apiKey = apiKeyEl.value.trim();
-  if (!apiKey) { setStatus("❌ APIキーを入力してください"); return; }
-  if (!userPromptEl.value.trim()) { setStatus("❌ イメージを入力してください"); return; }
-
-  const fullPrompt = BASE_PROMPT + userPromptEl.value;
-  setStatus("⏳ キャラクターを考案中...");
-
+  if (!apiKey) return setStatus("APIキーを入れて！");
+  
+  setStatus("生成中...");
   try {
     const res = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "dall-e-3", // 最新モデルを指定
-        prompt: fullPrompt,
-        n: 1,
-        size: "1024x1024",
+        model: "dall-e-3", // 生成はDALL-E 3
+        prompt: BASE_PROMPT + userPromptEl.value,
         response_format: "b64_json"
       })
     });
-
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || "生成に失敗しました");
+    if (!res.ok) throw new Error(data.error.message);
 
-    const b64 = data.data[0].b64_json;
-    imageHistory = []; // 新規生成時は履歴リセット
-    addHistory(base64ToDataUrl(b64));
-    setStatus("✅ 生成完了！");
-  } catch (e) {
-    setStatus("⚠️ エラー: " + e.message);
-    console.error(e);
-  }
-}
+    imageHistory = ["data:image/png;base64," + data.data[0].b64_json];
+    updateUI();
+    setStatus("生成完了！");
+  } catch (e) { setStatus("エラー: " + e.message); }
+};
 
-// 2. 画像の修正
-async function editImage() {
+// 2. 修正 (ここがエラーの原因でした)
+editBtn.onclick = async () => {
   const apiKey = apiKeyEl.value.trim();
-  const promptText = editPromptEl.value.trim();
-  if (imageHistory.length === 0) return;
-  if (!promptText) { setStatus("❌ どんな風に変えたいか入力してください"); return; }
-
-  setStatus("⏳ デザインを修正中...");
-
+  setStatus("修正中...");
   try {
-    const currentDataUrl = imageHistory[imageHistory.length - 1];
-    const blob = await dataUrlToBlob(currentDataUrl);
-    
+    const blob = await dataUrlToBlob(imageHistory[imageHistory.length - 1]);
     const form = new FormData();
+    // ★ここが大事！モデル名を指定する
+    form.append("model", "dall-e-2"); 
     form.append("image", blob, "image.png");
-    form.append("prompt", BASE_PROMPT + promptText);
-    form.append("n", 1);
-    form.append("size", "1024x1024");
+    form.append("prompt", BASE_PROMPT + editPromptEl.value);
     form.append("response_format", "b64_json");
 
     const res = await fetch("https://api.openai.com/v1/images/edits", {
@@ -212,28 +117,20 @@ async function editImage() {
       headers: { "Authorization": `Bearer ${apiKey}` },
       body: form
     });
-
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || "修正に失敗しました");
+    if (!res.ok) throw new Error(data.error.message);
 
-    addHistory(base64ToDataUrl(data.data[0].b64_json));
-    setStatus("✅ 修正が完了しました！");
-    editPromptEl.value = ""; // 入力欄をクリア
-  } catch (e) {
-    setStatus("⚠️ 修正エラー: " + e.message);
-    console.error(e);
-  }
-}
-
-// ボタンイベント
-generateBtn.onclick = generateImage;
-editBtn.onclick = editImage;
-undoBtn.onclick = () => {
-  if (imageHistory.length > 1) {
-    imageHistory.pop(); // 最新を捨てる
+    imageHistory.push("data:image/png;base64," + data.data[0].b64_json);
+    if(imageHistory.length > MAX_HISTORY) imageHistory.shift();
     updateUI();
-    setStatus("↩ 1つ前の画像に戻しました");
-  }
+    setStatus("修正完了！");
+  } catch (e) { setStatus("修正エラー: " + e.message); }
+};
+
+undoBtn.onclick = () => {
+  imageHistory.pop();
+  updateUI();
+  setStatus("元に戻しました");
 };
 </script>
 </body>
