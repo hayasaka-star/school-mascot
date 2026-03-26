@@ -117,7 +117,6 @@ const userPromptEl = document.getElementById("userPrompt");
 const editPromptEl = document.getElementById("editPrompt");
 const generateBtn = document.getElementById("generateBtn");
 const editBtn = document.getElementById("editBtn");
-const undoBtn = document.getElementById("undoBtn");
 const statusEl = document.getElementById("status");
 const resultEl = document.getElementById("result");
 const historyEl = document.getElementById("historyThumbs");
@@ -193,7 +192,6 @@ function renderHistory(){
     historyEl.appendChild(wrapper);
   });
 
-  undoBtn.disabled = currentIndex <= 0;
 }
 
 function addToHistory(dataUrl){
@@ -281,20 +279,6 @@ async function editImage(promptText){
   setStatus("修正完了！（分岐保存）");
 }
 
-undoBtn.onclick = () => {
-  if(currentIndex <= 0){
-    setStatus("これ以上戻れない");
-    return;
-  }
-
-  currentIndex--;
-  currentImageDataUrl = imageHistory[currentIndex];
-
-  showImage(currentImageDataUrl);
-  renderHistory();
-
-  setStatus("1つ前に戻した");
-};
 
 generateBtn.onclick = generateImage;
 editBtn.onclick = () => editImage(editPromptEl.value);
