@@ -215,7 +215,11 @@ async function generateImage(){
   if(generateBtn.disabled) return;  
   generateBtn.disabled = true; 
   const apiKey = apiKeyEl.value.trim();
-  if(!apiKey){ setStatus("APIキー入れて"); return; }
+  if(!apiKey){ 
+    setStatus("APIキー入れて"); 
+    generateBtn.disabled = false; 
+    return; 
+  }
 
   const fullPrompt = BASE_PROMPT + "。" + userPromptEl.value;
   setStatus("生成中...");
