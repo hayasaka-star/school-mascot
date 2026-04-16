@@ -252,8 +252,14 @@ async function generateImage(){
 }
 
 async function editImage(promptText){
+  if(editBtn.disabled) return;   // 二重防止
+  editBtn.disabled = true;       // ロック
   const apiKey = apiKeyEl.value.trim();
-  if(!currentImageDataUrl){ setStatus("先に生成して"); return; }
+  if(!currentImageDataUrl){ 
+    setStatus("先に生成して");
+    editBtn.disabled = false;
+    return;
+  }
 
   const finalPrompt = BASE_PROMPT + "。" + promptText;
   setStatus("修正中...");
@@ -272,7 +278,11 @@ async function editImage(promptText){
   });
 
   const data = await res.json();
-  if(!res.ok){ setStatus(JSON.stringify(data)); return; }
+  if(!res.ok){ 
+    setStatus(JSON.stringify(data)); 
+    editBtn.disabled = false;
+    return; 
+  }
 
   const b64 = data.data[0].b64_json;
   currentImageDataUrl = base64ToDataUrl(b64);
@@ -281,6 +291,7 @@ async function editImage(promptText){
   showImage(currentImageDataUrl);
 
   setStatus("修正完了！（分岐保存）");
+  editBtn.disabled = false; 
 }
 
 
