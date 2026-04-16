@@ -243,7 +243,7 @@ async function generateImage(){
   const b64 = data.data[0].b64_json;
   currentImageDataUrl = base64ToDataUrl(b64);
 
-  imageHistory = [];
+  //imageHistory = [];
   addToHistory(currentImageDataUrl);
 
   showImage(currentImageDataUrl);
