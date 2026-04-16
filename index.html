@@ -212,6 +212,8 @@ async function dataUrlToBlob(dataUrl){
 }
 
 async function generateImage(){
+  if(generateBtn.disabled) return;  
+  generateBtn.disabled = true; 
   const apiKey = apiKeyEl.value.trim();
   if(!apiKey){ setStatus("APIキー入れて"); return; }
 
@@ -232,7 +234,11 @@ async function generateImage(){
   });
 
   const data = await res.json();
-  if(!res.ok){ setStatus(JSON.stringify(data)); return; }
+  if(!res.ok){ 
+    setStatus(JSON.stringify(data)); 
+    generateBtn.disabled = false; 
+    return; 
+  }
 
   const b64 = data.data[0].b64_json;
   currentImageDataUrl = base64ToDataUrl(b64);
