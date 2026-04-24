@@ -23,11 +23,11 @@
     }
     textarea, input, button {
       width: 100%;
-      padding: 12px;          /* ←統一 */
+      padding: 12px;
       border-radius: 8px;
       border: none;
       margin-top: 8px;
-      box-sizing: border-box; /* ←これも重要 */
+      box-sizing: border-box;
     }
     button {
       margin-top: 10px;
@@ -123,7 +123,7 @@ let currentImageDataUrl = null;
 let imageHistory = [];
 let currentIndex = -1;
 
-const BASE_PROMPT = "高校のマスコットキャラクター。文字、ロゴ、アルファベット、数字、記号を一切含めない。背景なし、白背景または透明背景。キャラクター単体のみを中央に配置したシンプルなイラスト。";
+const BASE_PROMPT = "高校のマスコットキャラクター。文字やロゴ（英語、日本語、アルファベット、数字）を一切含めない。看板、服の文字、背景の文字も禁止。背景なし（無地の白）。キャラクター単体のみ、中央配置。";
 
 function setStatus(msg){ statusEl.textContent = msg; }
 
@@ -154,6 +154,8 @@ function renderHistory(){
       showImage(currentImageDataUrl);
       setStatus("履歴から選択");
       renderHistory();
+
+      sessionStorage.setItem("currentIndex", currentIndex);
     };
 
     const delBtn = document.createElement("button");
@@ -183,13 +185,15 @@ function renderHistory(){
 
       renderHistory();
       setStatus("履歴を削除");
+
+      sessionStorage.setItem("imageHistory", JSON.stringify(imageHistory));
+      sessionStorage.setItem("currentIndex", currentIndex);
     };
 
     wrapper.appendChild(img);
     wrapper.appendChild(delBtn);
     historyEl.appendChild(wrapper);
   });
-
 }
 
 function addToHistory(dataUrl){
@@ -200,6 +204,9 @@ function addToHistory(dataUrl){
     imageHistory.shift();
     currentIndex--;
   }
+
+  sessionStorage.setItem("imageHistory", JSON.stringify(imageHistory));
+  sessionStorage.setItem("currentIndex", currentIndex);
 
   renderHistory();
 }
@@ -212,13 +219,13 @@ async function dataUrlToBlob(dataUrl){
 }
 
 async function generateImage(){
-  if(generateBtn.disabled) return;  
-  generateBtn.disabled = true; 
+  if(generateBtn.disabled) return;
+  generateBtn.disabled = true;
   const apiKey = apiKeyEl.value.trim();
-  if(!apiKey){ 
-    setStatus("APIキー入れて"); 
-    generateBtn.disabled = false; 
-    return; 
+  if(!apiKey){
+    setStatus("APIキー入れて");
+    generateBtn.disabled = false;
+    return;
   }
 
   const fullPrompt = BASE_PROMPT + "。" + userPromptEl.value;
@@ -238,28 +245,27 @@ async function generateImage(){
   });
 
   const data = await res.json();
-  if(!res.ok){ 
-    setStatus(JSON.stringify(data)); 
-    generateBtn.disabled = false; 
-    return; 
+  if(!res.ok){
+    setStatus(JSON.stringify(data));
+    generateBtn.disabled = false;
+    return;
   }
 
   const b64 = data.data[0].b64_json;
   currentImageDataUrl = base64ToDataUrl(b64);
 
-  //imageHistory = [];
   addToHistory(currentImageDataUrl);
 
   showImage(currentImageDataUrl);
-  generateBtn.disabled = false; 
+  generateBtn.disabled = false;
   setStatus("生成完了！");
 }
 
 async function editImage(promptText){
-  if(editBtn.disabled) return;   // 二重防止
-  editBtn.disabled = true;       // ロック
+  if(editBtn.disabled) return;
+  editBtn.disabled = true;
   const apiKey = apiKeyEl.value.trim();
-  if(!currentImageDataUrl){ 
+  if(!currentImageDataUrl){
     setStatus("先に生成して");
     editBtn.disabled = false;
     return;
@@ -282,10 +288,10 @@ async function editImage(promptText){
   });
 
   const data = await res.json();
-  if(!res.ok){ 
-    setStatus(JSON.stringify(data)); 
+  if(!res.ok){
+    setStatus(JSON.stringify(data));
     editBtn.disabled = false;
-    return; 
+    return;
   }
 
   const b64 = data.data[0].b64_json;
@@ -295,9 +301,27 @@ async function editImage(promptText){
   showImage(currentImageDataUrl);
 
   setStatus("修正完了！（分岐保存）");
-  editBtn.disabled = false; 
+  editBtn.disabled = false;
 }
 
+window.onload = () => {
+  const savedHistory = sessionStorage.getItem("imageHistory");
+  const savedIndex = sessionStorage.getItem("currentIndex");
+
+  if(savedHistory){
+    imageHistory = JSON.parse(savedHistory);
+    currentIndex = parseInt(savedIndex) || 0;
+
+    currentImageDataUrl = imageHistory[currentIndex];
+
+    if(currentImageDataUrl){
+      showImage(currentImageDataUrl);
+    }
+
+    renderHistory();
+    setStatus("履歴を復元しました");
+  }
+};
 
 generateBtn.onclick = generateImage;
 editBtn.onclick = () => editImage(editPromptEl.value);
