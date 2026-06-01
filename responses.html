@@ -136,12 +136,6 @@
   <label>母校のイメージ</label>
 
   <textarea id="userPrompt"
-    placeholder="例：
-青色ベース
-元気
-スポーツが強い
-鳥モチーフ
-親しみやすい"
   ></textarea>
 
   <button id="generateBtn">
@@ -155,29 +149,7 @@
   <label>追加のイメージ</label>
 
   <textarea id="editPrompt"
-    placeholder="例：
-もっとかわいく
-少し若く
-高校生向けに"
   ></textarea>
-
-  <div class="quick-buttons">
-    <button onclick="quickEdit('もっとかわいく')">
-      かわいい
-    </button>
-
-    <button onclick="quickEdit('もっと若々しく')">
-      若く
-    </button>
-
-    <button onclick="quickEdit('もっとポップに')">
-      ポップ
-    </button>
-
-    <button onclick="quickEdit('もっとマスコット感を強く')">
-      マスコット感
-    </button>
-  </div>
 
   <button id="editBtn" disabled>
     この画像を修正
@@ -254,8 +226,7 @@ const BASE_PROMPT =
   "看板、服の文字、背景の文字も禁止。" +
   "背景なし（白背景）。" +
   "キャラクター単体のみ。" +
-  "中央配置。" +
-  "高品質。";
+  "中央配置。";
 
 function setStatus(msg){
   statusEl.textContent = msg;
