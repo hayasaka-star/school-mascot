@@ -1,687 +1,417 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>母校マスコット生成会議🎨</title>
-
-  <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      background: linear-gradient(135deg, #4fd1c5, #7da0e6);
-      color: #fff;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-
-    h1 {
-      text-align: center;
-    }
-
-    .panel {
-      background: rgba(255,255,255,0.1);
-      backdrop-filter: blur(10px);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 20px;
-    }
-
-    textarea,
-    input,
-    button {
-      width: 100%;
-      padding: 12px;
-      border-radius: 8px;
-      border: none;
-      margin-top: 8px;
-      box-sizing: border-box;
-    }
-
-    textarea {
-      min-height: 90px;
-      resize: vertical;
-    }
-
-    button {
-      margin-top: 10px;
-      border-radius: 10px;
-      background: #ff7eb3;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    button:hover {
-      transform: scale(1.03);
-    }
-
-    #status {
-      margin-top: 10px;
-      font-weight: bold;
-    }
-
-    img {
-      width: 100%;
-      border-radius: 12px;
-      margin-top: 10px;
-    }
-
-    .thumbs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .thumb-item {
-      position: relative;
-    }
-
-    .thumb-item img {
-      width: 80px;
-      height: 80px;
-      object-fit: cover;
-      cursor: pointer;
-      border: 2px solid transparent;
-    }
-
-    .thumb-item img.active {
-      border: 2px solid #fff;
-    }
-
-    .delete-btn {
-      position: absolute;
-      top: -5px;
-      right: -5px;
-      background: red;
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 20px;
-      height: 20px;
-      font-size: 12px;
-      cursor: pointer;
-      padding: 0;
-    }
-
-    .quick-buttons {
-      display: grid;
-      grid-template-columns: repeat(auto-fit,minmax(120px,1fr));
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .quick-buttons button {
-      margin-top: 0;
-      background: #6d7cff;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>母校マスコット生成会議🎨</title>
+<style>
+body{
+  font-family:"Segoe UI",sans-serif;
+  background:linear-gradient(135deg,#4fd1c5,#7da0e6);
+  color:#fff;
+  max-width:900px;
+  margin:0 auto;
+  padding:20px;
+}
+h1{text-align:center;}
+.panel{
+  background:rgba(255,255,255,0.1);
+  backdrop-filter:blur(10px);
+  border-radius:12px;
+  padding:16px;
+  margin-bottom:20px;
+}
+textarea,input,button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:8px;
+  box-sizing:border-box;
+  margin-top:8px;
+}
+textarea{
+  min-height:90px;
+  resize:vertical;
+}
+button{
+  background:#ff7eb3;
+  color:#fff;
+  font-weight:bold;
+  cursor:pointer;
+}
+button:disabled{
+  background:#ccc;
+  cursor:not-allowed;
+}
+#status{margin-top:10px;}
+img{
+  width:100%;
+  border-radius:12px;
+}
+.thumbs{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.thumb-item{position:relative;}
+.thumb-item img{
+  width:80px;
+  height:80px;
+  object-fit:cover;
+  cursor:pointer;
+  border:2px solid transparent;
+}
+.thumb-item img.active{
+  border-color:white;
+}
+.delete-btn{
+  position:absolute;
+  top:-5px;
+  right:-5px;
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  background:red;
+  color:white;
+  padding:0;
+  cursor:pointer;
+}
+</style>
 </head>
-
 <body>
 
 <h1>🎨母校マスコット生成会議</h1>
 
 <div class="panel">
+<label>APIキー</label>
+<input
+  type="password"
+  id="apiKey"
+  placeholder="sk-..."
+  oninput="sessionStorage.setItem('apiKey', this.value)"
+>
 
-  <label>APIキー</label>
-  <input
-    type="password"
-    id="apiKey"
-    placeholder="sk-..."
-  />
+<label>母校のイメージ</label>
+<textarea id="userPrompt"></textarea>
 
-  <label>母校のイメージ</label>
-
-  <textarea id="userPrompt"
-  ></textarea>
-
-  <button id="generateBtn">
-    新規生成
-  </button>
-
+<button id="generateBtn">新規生成</button>
 </div>
 
 <div class="panel">
+<label>追加のイメージ</label>
+<textarea id="editPrompt"></textarea>
 
-  <label>追加のイメージ</label>
-
-  <textarea id="editPrompt"
-  ></textarea>
-
-  <button id="editBtn" disabled>
-    この画像を修正
-  </button>
-
+<button id="editBtn" disabled>この画像を修正</button>
 </div>
 
-<div id="status">
-  待機中
+<div id="status">待機中</div>
+
+<div class="panel">
+<h2>生成結果</h2>
+<div id="result">まだ画像はありません</div>
 </div>
 
 <div class="panel">
-
-  <h2>生成結果</h2>
-
-  <div id="result">
-    まだ画像はありません
-  </div>
-
-</div>
-
-<div class="panel">
-
-  <h2>履歴（クリックで切替・×で削除）</h2>
-
-  <div
-    id="historyThumbs"
-    class="thumbs"
-  ></div>
-
+<h2>履歴（クリックで切替・×で削除）</h2>
+<div id="historyThumbs" class="thumbs"></div>
 </div>
 
 <script>
-
-const MAX_HISTORY = 20;
-
-const apiKeyEl =
-  document.getElementById("apiKey");
-
-const userPromptEl =
-  document.getElementById("userPrompt");
-
-const editPromptEl =
-  document.getElementById("editPrompt");
-
-const generateBtn =
-  document.getElementById("generateBtn");
-
-const editBtn =
-  document.getElementById("editBtn");
-
-const statusEl =
-  document.getElementById("status");
-
-const resultEl =
-  document.getElementById("result");
-
-const historyEl =
-  document.getElementById("historyThumbs");
-
-let currentImageDataUrl = null;
-
-let currentResponseId = null;
-
-let imageHistory = [];
-
-let responseHistory = [];
-
-let currentIndex = -1;
+const MAX_HISTORY = 10;
 
 const BASE_PROMPT =
-  "高校のマスコットキャラクター。" +
-  "文字やロゴ（英語、日本語、アルファベット、数字）を一切含めない。" +
-  "看板、服の文字、背景の文字も禁止。" +
-  "背景なし（白背景）。" +
-  "キャラクター単体のみ。" +
-  "256×256ピクセルの画像。" +
-  "中央配置。";
+"高校のマスコットキャラクター。文字やロゴ（英語、日本語、アルファベット、数字）を一切含めない。看板、服の文字、背景の文字も禁止。純白の背景。背景色は白(#FFFFFF)。透明背景は禁止。キャラクター単体のみ。中央配置。";
+
+const apiKeyEl = document.getElementById("apiKey");
+const userPromptEl = document.getElementById("userPrompt");
+const editPromptEl = document.getElementById("editPrompt");
+const generateBtn = document.getElementById("generateBtn");
+const editBtn = document.getElementById("editBtn");
+const statusEl = document.getElementById("status");
+const resultEl = document.getElementById("result");
+const historyEl = document.getElementById("historyThumbs");
+
+let history = [];
+let currentIndex = -1;
+
+// ★【超重要】1024x1024のオリジナル画質データをメモリ上に退避させるための配列
+// history配列と同じインデックス（順番）で管理します。ブラウザのメモリなので容量制限（5MB）を受けません。
+let originalImageCache = []; 
 
 function setStatus(msg){
   statusEl.textContent = msg;
 }
 
+function currentItem(){
+  return history[currentIndex] || null;
+}
+
 function showImage(dataUrl){
-
   resultEl.innerHTML = "";
-
   const img = document.createElement("img");
-
   img.src = dataUrl;
-
   resultEl.appendChild(img);
 }
 
-function renderHistory(){
+function saveSession(){
+  try {
+    // sessionStorageには512pxの軽い画像データだけを保存する（容量制限対策）
+    sessionStorage.setItem("history", JSON.stringify(history));
+    sessionStorage.setItem("currentIndex", currentIndex);
+  } catch (e) {
+    console.error("ストレージの保存に失敗しました:", e);
+  }
+}
 
+// 引数にオリジナルのB64データを追加
+function addToHistory(originalB64, resizedImage, prompt){
+  history.push({image: resizedImage, prompt});
+  originalImageCache.push(originalB64); // メモリ上のキャッシュに1024pxデータを保存
+
+  if(history.length > MAX_HISTORY){
+    history.shift();
+    originalImageCache.shift(); // キャッシュも連動して古いものを削除
+  }
+
+  currentIndex = history.length - 1;
+
+  saveSession();
+  renderHistory();
+}
+
+function renderHistory(){
   historyEl.innerHTML = "";
 
-  imageHistory.forEach((imgUrl, index) => {
+  history.forEach((item,index)=>{
 
-    const wrapper =
-      document.createElement("div");
-
+    const wrapper = document.createElement("div");
     wrapper.className = "thumb-item";
 
-    const img =
-      document.createElement("img");
-
-    img.src = imgUrl;
+    const img = document.createElement("img");
+    img.src = item.image;
 
     if(index === currentIndex){
       img.classList.add("active");
     }
 
-    img.onclick = () => {
-
+    img.onclick = ()=>{
       currentIndex = index;
-
-      currentImageDataUrl =
-        imageHistory[currentIndex];
-
-      currentResponseId =
-        responseHistory[currentIndex];
-
-      showImage(currentImageDataUrl);
-
-      renderHistory();
-
-      setStatus("履歴を切り替えました");
+      showImage(history[index].image);
 
       saveSession();
+      renderHistory();
+
+      // ★過去の履歴を選んでも、メモリから1024pxのオリジナルデータが存在するかチェック
+      if (originalImageCache[currentIndex]) {
+        setStatus("履歴から選択（高解像度データ保持：いつでも綺麗に修正できます）");
+      } else {
+        setStatus("履歴から選択（※リロードされたため、この画像のみ512px画質での修正になります）");
+      }
     };
 
-    const delBtn =
-      document.createElement("button");
+    const del = document.createElement("button");
+    del.className = "delete-btn";
+    del.textContent = "×";
 
-    delBtn.textContent = "×";
-
-    delBtn.className = "delete-btn";
-
-    delBtn.onclick = (e) => {
-
+    del.onclick = (e)=>{
       e.stopPropagation();
 
-      imageHistory.splice(index, 1);
+      history.splice(index,1);
+      originalImageCache.splice(index,1); // キャッシュも一緒に削除
 
-      responseHistory.splice(index, 1);
-
-      if(currentIndex >= index){
-        currentIndex--;
+      if(currentIndex >= history.length){
+        currentIndex = history.length - 1;
       }
-
-      if(
-        currentIndex < 0 &&
-        imageHistory.length > 0
-      ){
-        currentIndex = 0;
-      }
-
-      currentImageDataUrl =
-        imageHistory[currentIndex] || null;
-
-      currentResponseId =
-        responseHistory[currentIndex] || null;
-
-      if(currentImageDataUrl){
-
-        showImage(currentImageDataUrl);
-
-      }else{
-
-        resultEl.innerHTML =
-          "まだ画像はありません";
-      }
-
-      renderHistory();
 
       saveSession();
+      renderHistory();
 
-      setStatus("履歴を削除しました");
+      if(currentIndex >= 0){
+        showImage(history[currentIndex].image);
+      }else{
+        resultEl.innerHTML = "まだ画像はありません";
+        editBtn.disabled = true;
+      }
     };
 
     wrapper.appendChild(img);
-    wrapper.appendChild(delBtn);
-
+    wrapper.appendChild(del);
     historyEl.appendChild(wrapper);
-
   });
-
-}
-
-function saveSession(){
-
-  sessionStorage.setItem(
-    "imageHistory",
-    JSON.stringify(imageHistory)
-  );
-
-  sessionStorage.setItem(
-    "responseHistory",
-    JSON.stringify(responseHistory)
-  );
-
-  sessionStorage.setItem(
-    "currentIndex",
-    currentIndex
-  );
-
-}
-
-function addToHistory(dataUrl, responseId){
-
-  imageHistory.push(dataUrl);
-
-  responseHistory.push(responseId);
-
-  currentIndex =
-    imageHistory.length - 1;
-
-  if(imageHistory.length > MAX_HISTORY){
-
-    imageHistory.shift();
-
-    responseHistory.shift();
-
-    currentIndex--;
-
-  }
-
-  saveSession();
-
-  renderHistory();
 }
 
 function base64ToDataUrl(b64){
-
-  return `data:image/png;base64,${b64}`;
-
+  return "data:image/png;base64," + b64;
 }
 
-async function callResponsesAPI(
-  promptText,
-  previousResponseId = null
-){
-
-  const apiKey =
-    apiKeyEl.value.trim();
-
-  const payload = {
-
-    model: "gpt-5.5",
-
-    input: promptText,
-
-    tools: [
-      {
-        type: "image_generation"
-      }
-    ],
-  };
-
-  if(previousResponseId){
-
-    payload.previous_response_id =
-      previousResponseId;
-
-  }
-
-  const res = await fetch(
-    "https://api.openai.com/v1/responses",
-    {
-      method: "POST",
-
-      headers: {
-        "Content-Type":"application/json",
-        "Authorization":
-          `Bearer ${apiKey}`
-      },
-
-      body: JSON.stringify(payload)
-    }
-  );
-
-  const data = await res.json();
-
-  if(!res.ok){
-
-    console.error(data);
-
-    throw new Error(
-      JSON.stringify(data)
-    );
-
-  }
-
-  let imageBase64 = null;
-
-  for(const item of data.output){
-
-    if(
-      item.type ===
-      "image_generation_call"
-    ){
-
-      imageBase64 = item.result;
-
-    }
-
-  }
-
-  if(!imageBase64){
-
-    throw new Error(
-      "画像データ取得失敗"
-    );
-
-  }
-
-  return {
-    responseId: data.id,
-    imageBase64
-  };
-
+async function dataUrlToBlob(dataUrl){
+  const r = await fetch(dataUrl);
+  return await r.blob();
 }
 
+async function resizeImage(dataUrl, size = 512){
+  return new Promise((resolve)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, size, size);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.src = dataUrl;
+  });
+}
+  
 async function generateImage(){
-
-  if(generateBtn.disabled) return;
-
-  generateBtn.disabled = true;
-
-  editBtn.disabled = true;
-
-  try{
-
-    const apiKey =
-      apiKeyEl.value.trim();
-
-    if(!apiKey){
-
-      setStatus("APIキーを入力してください");
-
-      return;
-
-    }
-
-    setStatus("新規生成中...");
-
-    const fullPrompt =
-      BASE_PROMPT +
-      "。" +
-      userPromptEl.value;
-
-    const result =
-      await callResponsesAPI(fullPrompt);
-
-    currentResponseId =
-      result.responseId;
-
-    currentImageDataUrl =
-      base64ToDataUrl(
-        result.imageBase64
-      );
-
-    addToHistory(
-      currentImageDataUrl,
-      currentResponseId
-    );
-
-    showImage(currentImageDataUrl);
-
-    setStatus("生成完了！");
-
-    editBtn.disabled = false;
-
-  }catch(err){
-
-    console.error(err);
-
-    setStatus(err.message);
-
-  }finally{
-
-    generateBtn.disabled = false;
-
+  const apiKey = apiKeyEl.value.trim();
+  if(!apiKey){
+    setStatus("APIキーを入力してください");
+    return;
   }
 
-}
-
-async function editImage(promptText){
-
-  if(editBtn.disabled) return;
-
-  editBtn.disabled = true;
-
   generateBtn.disabled = true;
 
   try{
+    setStatus("生成中...");
 
-    if(!currentResponseId){
+    const prompt = userPromptEl.value.trim();
+    const fullPrompt = BASE_PROMPT + "。" + prompt;
 
-      setStatus("先に生成してください");
+    const res = await fetch(
+      "https://api.openai.com/v1/images/generations",
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":"Bearer " + apiKey
+        },
+        body:JSON.stringify({
+          model:"gpt-image-1", 
+          prompt:fullPrompt,
+          size:"1024x1024",
+          response_format: "b64_json"
+        })
+      }
+    );
 
-      return;
-
+    const data = await res.json();
+    if(!res.ok){
+      throw new Error(JSON.stringify(data));
     }
 
+    const originalB64 = data.data[0].b64_json;
+    const originalDataUrl = base64ToDataUrl(originalB64);
+    
+    // 表示・ストレージ用に512pxにリサイズ
+    const resizedImage = await resizeImage(originalDataUrl, 512);
+    
+    // 履歴追加（1024pxのB64、512pxのDataURL、プロンプト）
+    addToHistory(originalB64, resizedImage, prompt);
+    showImage(resizedImage);
+
+    editBtn.disabled = false;
+    setStatus("生成完了");
+
+  }catch(e){
+    setStatus(e.message);
+  }
+  generateBtn.disabled = false;
+}
+
+async function editImage(){
+  const item = currentItem();
+  if(!item){
+    setStatus("先に生成してください");
+    return;
+  }
+
+  editBtn.disabled = true;
+
+  try{
     setStatus("修正中...");
+    const apiKey = apiKeyEl.value.trim();
+    const originalPrompt = item.prompt;
+    const editText = editPromptEl.value.trim();
 
-    const finalPrompt =
-      BASE_PROMPT +
-      "。" +
-      promptText;
+    const finalPrompt = `
+${BASE_PROMPT}
+元のキャラクター設定: ${originalPrompt}
+今回の変更: ${editText}
+現在の画像をベースに編集する。変更箇所以外はできるだけ維持する。`;
 
-    const result =
-      await callResponsesAPI(
-        finalPrompt,
-        currentResponseId
-      );
+    let blob;
+    // ★ 現在選ばれているインデックスに対応する1024pxのキャッシュがあるか確認
+    if (originalImageCache[currentIndex]) {
+      // 過去の履歴であっても、キャッシュにあれば1024x1024の最高画質データを使う！
+      blob = await dataUrlToBlob(base64ToDataUrl(originalImageCache[currentIndex]));
+    } else {
+      // 万が一、ページがリロードされてメモリが飛んだ場合は、バックアップとして512pxのデータを使う
+      blob = await dataUrlToBlob(item.image);
+    }
 
-    currentResponseId =
-      result.responseId;
+    const form = new FormData();
+    form.append("model","gpt-image-1");
+    form.append("prompt",finalPrompt);
+    form.append("image",blob,"image.png");
 
-    currentImageDataUrl =
-      base64ToDataUrl(
-        result.imageBase64
-      );
-
-    addToHistory(
-      currentImageDataUrl,
-      currentResponseId
+    const res = await fetch(
+      "https://api.openai.com/v1/images/edits",
+      {
+        method:"POST",
+        headers:{ "Authorization":"Bearer " + apiKey },
+        body:form
+      }
     );
 
-    showImage(currentImageDataUrl);
+    const data = await res.json();
+    if(!res.ok){
+      throw new Error(JSON.stringify(data));
+    }
 
-    setStatus("修正完了！");
+    const newOriginalB64 = data.data[0].b64_json;
+    const originalDataUrl = base64ToDataUrl(newOriginalB64);
+    const resizedImage = await resizeImage(originalDataUrl, 512);
+    
+    // 新しい修正画像として履歴とメモリに追加
+    addToHistory(newOriginalB64, resizedImage, originalPrompt);
+    showImage(resizedImage);
 
-  }catch(err){
+    setStatus("修正完了");
 
-    console.error(err);
-
-    setStatus(err.message);
-
-  }finally{
-
-    editBtn.disabled = false;
-
-    generateBtn.disabled = false;
-
+  }catch(e){
+    setStatus(e.message);
   }
-
+  editBtn.disabled = false;
 }
 
-function quickEdit(text){
-
-  editPromptEl.value = text;
-
-  editImage(text);
-
-}
-
-window.onload = () => {
-
-  const savedHistory =
-    sessionStorage.getItem(
-      "imageHistory"
-    );
-
-  const savedResponseHistory =
-    sessionStorage.getItem(
-      "responseHistory"
-    );
-
-  const savedIndex =
-    sessionStorage.getItem(
-      "currentIndex"
-    );
+window.onload = ()=>{
+  apiKeyEl.value = sessionStorage.getItem("apiKey") || "";
+  const savedHistory = sessionStorage.getItem("history");
+  const savedIndex = sessionStorage.getItem("currentIndex");
 
   if(savedHistory){
-
-    imageHistory =
-      JSON.parse(savedHistory);
-
+    history = JSON.parse(savedHistory);
   }
-
-  if(savedResponseHistory){
-
-    responseHistory =
-      JSON.parse(savedResponseHistory);
-
+  if(savedIndex !== null){
+    currentIndex = parseInt(savedIndex,10);
   }
-
-  if(savedIndex){
-
-    currentIndex =
-      parseInt(savedIndex);
-
-  }
-
-  if(
-    imageHistory.length > 0 &&
-    currentIndex >= 0
-  ){
-
-    currentImageDataUrl =
-      imageHistory[currentIndex];
-
-    currentResponseId =
-      responseHistory[currentIndex];
-
-    showImage(currentImageDataUrl);
-
-    renderHistory();
-
+  if(history.length > 0 && currentIndex >= 0){
+    showImage(history[currentIndex].image);
     editBtn.disabled = false;
-
-    setStatus("履歴を復元しました");
-
+    
+    // ※ブラウザが手動でリロード（F5）された場合、メモリ上の originalImageCache は空になります。
+    // そのため初期化だけしておきます。
+    originalImageCache = new Array(history.length).fill(null);
+    
+    setStatus("履歴を復元しました（※F5リロードを挟んだため、既存の履歴の修正は512px画質になります）");
   }
-
+  renderHistory();
 };
 
-generateBtn.onclick =
-  generateImage;
-
-editBtn.onclick = () =>
-  editImage(
-    editPromptEl.value
-  );
-
+generateBtn.onclick = generateImage;
+editBtn.onclick = editImage;
 </script>
-
 </body>
 </html>
-```
