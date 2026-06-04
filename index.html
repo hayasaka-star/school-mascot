@@ -227,6 +227,43 @@ async function dataUrlToBlob(dataUrl){
   return await r.blob();
 }
 
+async function resizeImage(dataUrl, size = 256){
+
+  return new Promise((resolve)=>{
+
+    const img = new Image();
+
+    img.onload = ()=>{
+
+      const canvas =
+        document.createElement("canvas");
+
+      canvas.width = size;
+      canvas.height = size;
+
+      const ctx =
+        canvas.getContext("2d");
+
+      ctx.drawImage(
+        img,
+        0,
+        0,
+        size,
+        size
+      );
+
+      resolve(
+        canvas.toDataURL(
+          "image/jpeg",
+          0.8
+        )
+      );
+    };
+
+    img.src = dataUrl;
+  });
+}
+  
 async function generateImage(){
 
   const apiKey = apiKeyEl.value.trim();
@@ -271,11 +308,21 @@ async function generateImage(){
     }
 
     const image =
-      base64ToDataUrl(data.data[0].b64_json);
+      base64ToDataUrl(
+        data.data[0].b64_json
+      );
+    
+    const resizedImage =
+      await resizeImage(image,256);
+    
+    addToHistory(
+      resizedImage,
+      prompt
+    );
+    
+    showImage(resizedImage);
 
-    addToHistory(image,prompt);
 
-    showImage(image);
 
     editBtn.disabled = false;
 
