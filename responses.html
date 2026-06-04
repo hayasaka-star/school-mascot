@@ -206,7 +206,7 @@ function renderHistory(){
       if (originalImageCache[currentIndex]) {
         setStatus("履歴から選択（高解像度データ保持：いつでも綺麗に修正できます）");
       } else {
-        setStatus("履歴から選択（※リロードされたため、この画像のみ512px画質での修正になります）");
+        setStatus("履歴から選択（※リロードされたため、この画像のみ 512px 画質での修正になります）");
       }
     };
 
@@ -241,28 +241,13 @@ function renderHistory(){
   });
 }
 
-// URL（またはDataURL）からBlobに変換する関数
+function base64ToDataUrl(b64){
+  return "data:image/png;base64," + b64;
+}
+
 async function dataUrlToBlob(url){
   const r = await fetch(url);
   return await r.blob();
-}
-
-// 画像のURLから1024x1024のDataURL（Base64形式）を作成するヘルパー
-async function imageUrlToDataUrl1024(url) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous"; // CORS対策
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 1024;
-      canvas.height = 1024;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, 1024, 1024);
-      resolve(canvas.toDataURL("image/png"));
-    };
-    img.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
-    img.src = url;
-  });
 }
 
 async function resizeImage(dataUrl, size = 512){
@@ -320,7 +305,7 @@ async function generateImage(){
         body:JSON.stringify({
           model:"gpt-image-1", 
           prompt:fullPrompt,
-          size:"1024x1024" // response_format パラメータを削除
+          size:"1024x1024"
         })
       }
     );
@@ -330,10 +315,15 @@ async function generateImage(){
       throw new Error(JSON.stringify(data));
     }
 
-    // 返ってきたURLから、高解像度(1024px)のDataURLを生成
-    const originalImageUrl = data.data[0].url;
-    const originalDataUrl = await imageUrlToDataUrl1024(originalImageUrl);
-    
+    // APIから返ってきたデータを判別して確実にBase64(DataURL)として取得する
+    let originalDataUrl;
+    if (data.data[0].b64_json) {
+      originalDataUrl = base64ToDataUrl(data.data[0].b64_json);
+    } else if (data.data[0].url) {
+      // 万が一URLで返ってきた場合はそのまま指定（通常はb64_jsonで返る想定）
+      originalDataUrl = data.data[0].url;
+    }
+
     // 表示・ストレージ用に512pxにリサイズ
     const resizedImage = await resizeImage(originalDataUrl, 512);
     
@@ -398,9 +388,14 @@ ${BASE_PROMPT}
       throw new Error(JSON.stringify(data));
     }
 
-    // 修正APIは元々URLを返す仕様なので、こちらも1024pxのデータに変換
-    const newOriginalUrl = data.data[0].url;
-    const newOriginalDataUrl = await imageUrlToDataUrl1024(newOriginalUrl);
+    // 修正結果のデータを取得
+    let newOriginalDataUrl;
+    if (data.data[0].b64_json) {
+      newOriginalDataUrl = base64ToDataUrl(data.data[0].b64_json);
+    } else if (data.data[0].url) {
+      newOriginalDataUrl = data.data[0].url;
+    }
+
     const resizedImage = await resizeImage(newOriginalDataUrl, 512);
     
     addToHistory(newOriginalDataUrl, resizedImage, originalPrompt);
