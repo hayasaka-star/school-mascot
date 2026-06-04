@@ -42,6 +42,7 @@ button{
 button:disabled{
   background:#ccc;
   cursor:not-allowed;
+  opacity: 0.6;
 }
 #status{margin-top:10px;}
 img{
@@ -63,6 +64,13 @@ img{
 }
 .thumb-item img.active{
   border-color:white;
+}
+/* ★通信中に履歴（サムネイルや削除ボタン）をクリックできなくするクラス */
+.thumbs.disabled-ui .thumb-item img,
+.thumbs.disabled-ui .delete-btn {
+  cursor:not-allowed;
+  pointer-events: none; /* クリックイベントを完全に無効化 */
+  opacity: 0.5;         /* 見た目も半透明にして無効感を出す */
 }
 .delete-btn{
   position:absolute;
@@ -133,9 +141,6 @@ const historyEl = document.getElementById("historyThumbs");
 
 let history = [];
 let currentIndex = -1;
-
-// ★【超重要】1024x1024のオリジナル画質データをメモリ上に退避させるための配列
-// history配列と同じインデックス（順番）で管理します。ブラウザのメモリなので容量制限（5MB）を受けません。
 let originalImageCache = []; 
 
 function setStatus(msg){
@@ -155,7 +160,6 @@ function showImage(dataUrl){
 
 function saveSession(){
   try {
-    // sessionStorageには512pxの軽い画像データだけを保存する（容量制限対策）
     sessionStorage.setItem("history", JSON.stringify(history));
     sessionStorage.setItem("currentIndex", currentIndex);
   } catch (e) {
@@ -163,14 +167,13 @@ function saveSession(){
   }
 }
 
-// 引数にオリジナルのB64データを追加
 function addToHistory(originalB64, resizedImage, prompt){
   history.push({image: resizedImage, prompt});
-  originalImageCache.push(originalB64); // メモリ上のキャッシュに1024pxデータを保存
+  originalImageCache.push(originalB64);
 
   if(history.length > MAX_HISTORY){
     history.shift();
-    originalImageCache.shift(); // キャッシュも連動して古いものを削除
+    originalImageCache.shift();
   }
 
   currentIndex = history.length - 1;
@@ -183,7 +186,6 @@ function renderHistory(){
   historyEl.innerHTML = "";
 
   history.forEach((item,index)=>{
-
     const wrapper = document.createElement("div");
     wrapper.className = "thumb-item";
 
@@ -201,7 +203,6 @@ function renderHistory(){
       saveSession();
       renderHistory();
 
-      // ★過去の履歴を選んでも、メモリから1024pxのオリジナルデータが存在するかチェック
       if (originalImageCache[currentIndex]) {
         setStatus("履歴から選択（高解像度データ保持：いつでも綺麗に修正できます）");
       } else {
@@ -217,7 +218,7 @@ function renderHistory(){
       e.stopPropagation();
 
       history.splice(index,1);
-      originalImageCache.splice(index,1); // キャッシュも一緒に削除
+      originalImageCache.splice(index,1);
 
       if(currentIndex >= history.length){
         currentIndex = history.length - 1;
@@ -263,6 +264,22 @@ async function resizeImage(dataUrl, size = 512){
     img.src = dataUrl;
   });
 }
+
+// ★【新機能】すべてのボタンや履歴の操作を制限・解除する共通関数
+function setUIRocking(isLock) {
+  generateBtn.disabled = isLock;
+  editBtn.disabled = isLock;
+  
+  if (isLock) {
+    historyEl.classList.add("disabled-ui"); // CSSでクリックを禁止にする
+  } else {
+    historyEl.classList.remove("disabled-ui");
+    // ロック解除時、画像が1枚以上あれば修正ボタンを使用可能に戻す
+    if(history.length > 0 && currentIndex >= 0) {
+      editBtn.disabled = false;
+    }
+  }
+}
   
 async function generateImage(){
   const apiKey = apiKeyEl.value.trim();
@@ -271,7 +288,8 @@ async function generateImage(){
     return;
   }
 
-  generateBtn.disabled = true;
+  // UIをロック
+  setUIRocking(true);
 
   try{
     setStatus("生成中...");
@@ -304,20 +322,19 @@ async function generateImage(){
     const originalB64 = data.data[0].b64_json;
     const originalDataUrl = base64ToDataUrl(originalB64);
     
-    // 表示・ストレージ用に512pxにリサイズ
     const resizedImage = await resizeImage(originalDataUrl, 512);
     
-    // 履歴追加（1024pxのB64、512pxのDataURL、プロンプト）
     addToHistory(originalB64, resizedImage, prompt);
     showImage(resizedImage);
 
-    editBtn.disabled = false;
     setStatus("生成完了");
 
   }catch(e){
     setStatus(e.message);
   }
-  generateBtn.disabled = false;
+  
+  // UIのロックを解除
+  setUIRocking(false);
 }
 
 async function editImage(){
@@ -327,7 +344,8 @@ async function editImage(){
     return;
   }
 
-  editBtn.disabled = true;
+  // UIをロック
+  setUIRocking(true);
 
   try{
     setStatus("修正中...");
@@ -342,12 +360,9 @@ ${BASE_PROMPT}
 現在の画像をベースに編集する。変更箇所以外はできるだけ維持する。`;
 
     let blob;
-    // ★ 現在選ばれているインデックスに対応する1024pxのキャッシュがあるか確認
     if (originalImageCache[currentIndex]) {
-      // 過去の履歴であっても、キャッシュにあれば1024x1024の最高画質データを使う！
       blob = await dataUrlToBlob(base64ToDataUrl(originalImageCache[currentIndex]));
     } else {
-      // 万が一、ページがリロードされてメモリが飛んだ場合は、バックアップとして512pxのデータを使う
       blob = await dataUrlToBlob(item.image);
     }
 
@@ -374,7 +389,6 @@ ${BASE_PROMPT}
     const originalDataUrl = base64ToDataUrl(newOriginalB64);
     const resizedImage = await resizeImage(originalDataUrl, 512);
     
-    // 新しい修正画像として履歴とメモリに追加
     addToHistory(newOriginalB64, resizedImage, originalPrompt);
     showImage(resizedImage);
 
@@ -383,7 +397,9 @@ ${BASE_PROMPT}
   }catch(e){
     setStatus(e.message);
   }
-  editBtn.disabled = false;
+  
+  // UIのロックを解除
+  setUIRocking(false);
 }
 
 window.onload = ()=>{
@@ -400,11 +416,7 @@ window.onload = ()=>{
   if(history.length > 0 && currentIndex >= 0){
     showImage(history[currentIndex].image);
     editBtn.disabled = false;
-    
-    // ※ブラウザが手動でリロード（F5）された場合、メモリ上の originalImageCache は空になります。
-    // そのため初期化だけしておきます。
     originalImageCache = new Array(history.length).fill(null);
-    
     setStatus("履歴を復元しました（※F5リロードを挟んだため、既存の履歴の修正は512px画質になります）");
   }
   renderHistory();
