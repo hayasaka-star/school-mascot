@@ -227,7 +227,7 @@ async function dataUrlToBlob(dataUrl){
   return await r.blob();
 }
 
-async function resizeImage(dataUrl, size = 256){
+async function resizeImage(dataUrl, size = 512){
 
   return new Promise((resolve)=>{
 
@@ -312,7 +312,7 @@ async function generateImage(){
       );
     
     const resizedImage =
-      await resizeImage(image,256);
+      await resizeImage(image,512);
     
     addToHistory(
       resizedImage,
@@ -399,7 +399,7 @@ ${editText}
       base64ToDataUrl(data.data[0].b64_json);
     
     const resizedImage =
-      await resizeImage(image,256);
+      await resizeImage(image,512);
     
     addToHistory(
       resizedImage,
