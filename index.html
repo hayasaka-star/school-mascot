@@ -232,12 +232,12 @@ async function generateImage(){
   }
 
   apiKeyEl.addEventListener("input", () => {
-  sessionStorage.setItem(
-    "apiKey",
-    apiKeyEl.value
-    );
     console.log("saved", apiKeyEl.value);
-  });
+    sessionStorage.setItem(
+      "apiKey",
+      apiKeyEl.value
+      );
+    });
 
   generateBtn.disabled = true;
 
