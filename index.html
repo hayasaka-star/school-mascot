@@ -79,7 +79,12 @@ img{
 
 <div class="panel">
 <label>APIキー</label>
-<input type="password" id="apiKey" placeholder="sk-...">
+<input
+  type="password"
+  id="apiKey"
+  placeholder="sk-..."
+  oninput="sessionStorage.setItem('apiKey', this.value)"
+>
 
 <label>母校のイメージ</label>
 <textarea id="userPrompt"></textarea>
@@ -231,14 +236,6 @@ async function generateImage(){
     return;
   }
 
-  apiKeyEl.addEventListener("input", () => {
-    console.log("saved", apiKeyEl.value);
-    sessionStorage.setItem(
-      "apiKey",
-      apiKeyEl.value
-      );
-    });
-
   generateBtn.disabled = true;
 
   try{
@@ -369,12 +366,8 @@ ${editText}
 }
 
 window.onload = ()=>{
-  const savedApiKey =
-  sessionStorage.getItem("apiKey");
-
-  if(savedApiKey){
-    apiKeyEl.value = savedApiKey;
-  }
+  apiKeyEl.value =
+    sessionStorage.getItem("apiKey") || "";
 
   const savedHistory =
     sessionStorage.getItem("history");
