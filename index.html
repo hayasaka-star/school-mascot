@@ -231,6 +231,13 @@ async function generateImage(){
     return;
   }
 
+  apiKeyEl.addEventListener("input", () => {
+  sessionStorage.setItem(
+    "apiKey",
+    apiKeyEl.value
+    );
+  });
+
   generateBtn.disabled = true;
 
   try{
@@ -361,6 +368,12 @@ ${editText}
 }
 
 window.onload = ()=>{
+  const savedApiKey =
+  sessionStorage.getItem("apiKey");
+
+  if(savedApiKey){
+    apiKeyEl.value = savedApiKey;
+  }
 
   const savedHistory =
     sessionStorage.getItem("history");
