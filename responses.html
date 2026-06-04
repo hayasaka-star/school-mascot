@@ -141,7 +141,62 @@ const historyEl = document.getElementById("historyThumbs");
 
 let history = [];
 let currentIndex = -1;
-let originalImageCache = []; 
+
+// --- 📦 IndexedDB の初期化設定 ---
+const DB_NAME = "MascotAppDB";
+const STORE_NAME = "originalImages";
+let db = null;
+
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = (e) => {
+      const dbRes = e.target.result;
+      if (!dbRes.objectStoreNames.contains(STORE_NAME)) {
+        dbRes.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+      }
+    };
+    request.onsuccess = (e) => {
+      db = e.target.result;
+      resolve(db);
+    };
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+// データベースに高画質画像を保存する関数
+function saveOriginalImageToDB(originalDataUrl) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.add({ dataUrl: originalDataUrl });
+    request.onsuccess = (e) => resolve(e.target.result); // 自動採番されたIDを返す
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+// データベースから高画質画像を取得する関数
+function getOriginalImageFromDB(dbId) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.get(dbId);
+    request.onsuccess = (e) => resolve(e.target.result ? e.target.result.dataUrl : null);
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+// データベースから特定の画像を削除する関数
+function deleteOriginalImageFromDB(dbId) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.delete(dbId);
+    request.onsuccess = () => resolve();
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+// ---------------------------------
 
 function setStatus(msg){
   statusEl.textContent = msg;
@@ -167,13 +222,15 @@ function saveSession(){
   }
 }
 
-function addToHistory(originalDataUrl, resizedImage, prompt){
-  history.push({image: resizedImage, prompt});
-  originalImageCache.push(originalDataUrl); // 1024pxのDataURLをメモリに保存
+// 引数にDBのID(dbId)を受け取るように変更
+async function addToHistory(dbId, resizedImage, prompt){
+  history.push({image: resizedImage, prompt, dbId: dbId});
 
   if(history.length > MAX_HISTORY){
-    history.shift();
-    originalImageCache.shift();
+    const removedItem = history.shift();
+    if(removedItem && removedItem.dbId) {
+      await deleteOriginalImageFromDB(removedItem.dbId); // 古い高解像度データをDBから自動削除
+    }
   }
 
   currentIndex = history.length - 1;
@@ -203,22 +260,23 @@ function renderHistory(){
       saveSession();
       renderHistory();
 
-      if (originalImageCache[currentIndex]) {
-        setStatus("履歴から選択（高解像度データ保持：いつでも綺麗に修正できます）");
-      } else {
-        setStatus("履歴から選択（※リロードされたため、この画像のみ 512px 画質での修正になります）");
-      }
+      // IndexedDBにデータがあるため、いつでも高解像度修正が可能です
+      setStatus("履歴から選択（高解像度データを常時保持：いつでも綺麗に修正できます）");
     };
 
     const del = document.createElement("button");
     del.className = "delete-btn";
     del.textContent = "×";
 
-    del.onclick = (e)=>{
+    del.onclick = async (e)=>{
       e.stopPropagation();
 
+      const target = history[index];
+      if(target && target.dbId) {
+        await deleteOriginalImageFromDB(target.dbId); // DBからも削除
+      }
+
       history.splice(index,1);
-      originalImageCache.splice(index,1);
 
       if(currentIndex >= history.length){
         currentIndex = history.length - 1;
@@ -315,20 +373,21 @@ async function generateImage(){
       throw new Error(JSON.stringify(data));
     }
 
-    // APIから返ってきたデータを判別して確実にBase64(DataURL)として取得する
-    let originalDataUrl;
+    let originalDataUrl = "";
     if (data.data[0].b64_json) {
       originalDataUrl = base64ToDataUrl(data.data[0].b64_json);
     } else if (data.data[0].url) {
-      // 万が一URLで返ってきた場合はそのまま指定（通常はb64_jsonで返る想定）
       originalDataUrl = data.data[0].url;
     }
 
-    // 表示・ストレージ用に512pxにリサイズ
+    // ★ 1024pxの高解像度画像を IndexedDB に永久保存し、その管理番号(ID)を取得
+    const dbId = await saveOriginalImageToDB(originalDataUrl);
+
+    // 表示・サムネイル用に512pxにリサイズ
     const resizedImage = await resizeImage(originalDataUrl, 512);
     
-    // 履歴とメモリに追加
-    addToHistory(originalDataUrl, resizedImage, prompt);
+    // 履歴追加（管理IDを渡す）
+    await addToHistory(dbId, resizedImage, prompt);
     showImage(resizedImage);
 
     setStatus("生成完了");
@@ -362,10 +421,18 @@ ${BASE_PROMPT}
 現在の画像をベースに編集する。変更箇所以外はできるだけ維持する。`;
 
     let blob;
-    // メモリキャッシュに1024pxデータがあればそれを使う
-    if (originalImageCache[currentIndex]) {
-      blob = await dataUrlToBlob(originalImageCache[currentIndex]);
+    let originalDataUrl = null;
+
+    // ★ 履歴に紐づく管理IDから、IndexedDBの1024px画像をいつでも引っ張ってくる
+    if (item.dbId) {
+      originalDataUrl = await getOriginalImageFromDB(item.dbId);
+    }
+
+    if (originalDataUrl) {
+      // リロードを挟んでも、過去の履歴でも、常に1024pxでAPIに送信可能！
+      blob = await dataUrlToBlob(originalDataUrl);
     } else {
+      // 万が一のセーフティネット
       blob = await dataUrlToBlob(item.image);
     }
 
@@ -388,7 +455,6 @@ ${BASE_PROMPT}
       throw new Error(JSON.stringify(data));
     }
 
-    // 修正結果のデータを取得
     let newOriginalDataUrl;
     if (data.data[0].b64_json) {
       newOriginalDataUrl = base64ToDataUrl(data.data[0].b64_json);
@@ -396,9 +462,11 @@ ${BASE_PROMPT}
       newOriginalDataUrl = data.data[0].url;
     }
 
+    // 新しい修正画像も 1024px で IndexedDB に保存
+    const newDbId = await saveOriginalImageToDB(newOriginalDataUrl);
     const resizedImage = await resizeImage(newOriginalDataUrl, 512);
     
-    addToHistory(newOriginalDataUrl, resizedImage, originalPrompt);
+    await addToHistory(newDbId, resizedImage, originalPrompt);
     showImage(resizedImage);
 
     setStatus("修正完了");
@@ -410,8 +478,16 @@ ${BASE_PROMPT}
   setUIRocking(false);
 }
 
-window.onload = ()=>{
+window.onload = async ()=>{
   apiKeyEl.value = sessionStorage.getItem("apiKey") || "";
+  
+  // DBの初期化を待つ
+  try {
+    await initDB();
+  } catch(e) {
+    console.error("IndexedDBの初期化に失敗しました", e);
+  }
+
   const savedHistory = sessionStorage.getItem("history");
   const savedIndex = sessionStorage.getItem("currentIndex");
 
@@ -424,8 +500,7 @@ window.onload = ()=>{
   if(history.length > 0 && currentIndex >= 0){
     showImage(history[currentIndex].image);
     editBtn.disabled = false;
-    originalImageCache = new Array(history.length).fill(null);
-    setStatus("履歴を復元しました（※F5リロードを挟んだため、既存の履歴の修正は512px画質になります）");
+    setStatus("履歴と高解像度データを復元しました。いつでも綺麗に修正できます。");
   }
   renderHistory();
 };
