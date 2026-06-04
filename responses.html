@@ -65,12 +65,12 @@ img{
 .thumb-item img.active{
   border-color:white;
 }
-/* ★通信中に履歴（サムネイルや削除ボタン）をクリックできなくするクラス */
+/* 通信中に履歴（サムネイルや削除ボタン）をクリックできなくするクラス */
 .thumbs.disabled-ui .thumb-item img,
 .thumbs.disabled-ui .delete-btn {
   cursor:not-allowed;
-  pointer-events: none; /* クリックイベントを完全に無効化 */
-  opacity: 0.5;         /* 見た目も半透明にして無効感を出す */
+  pointer-events: none;
+  opacity: 0.5;
 }
 .delete-btn{
   position:absolute;
@@ -167,9 +167,9 @@ function saveSession(){
   }
 }
 
-function addToHistory(originalB64, resizedImage, prompt){
+function addToHistory(originalDataUrl, resizedImage, prompt){
   history.push({image: resizedImage, prompt});
-  originalImageCache.push(originalB64);
+  originalImageCache.push(originalDataUrl); // 1024pxのDataURLをメモリに保存
 
   if(history.length > MAX_HISTORY){
     history.shift();
@@ -241,13 +241,28 @@ function renderHistory(){
   });
 }
 
-function base64ToDataUrl(b64){
-  return "data:image/png;base64," + b64;
+// URL（またはDataURL）からBlobに変換する関数
+async function dataUrlToBlob(url){
+  const r = await fetch(url);
+  return await r.blob();
 }
 
-async function dataUrlToBlob(dataUrl){
-  const r = await fetch(dataUrl);
-  return await r.blob();
+// 画像のURLから1024x1024のDataURL（Base64形式）を作成するヘルパー
+async function imageUrlToDataUrl1024(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous"; // CORS対策
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1024;
+      canvas.height = 1024;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, 1024, 1024);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
+    img.src = url;
+  });
 }
 
 async function resizeImage(dataUrl, size = 512){
@@ -265,16 +280,14 @@ async function resizeImage(dataUrl, size = 512){
   });
 }
 
-// ★【新機能】すべてのボタンや履歴の操作を制限・解除する共通関数
 function setUIRocking(isLock) {
   generateBtn.disabled = isLock;
   editBtn.disabled = isLock;
   
   if (isLock) {
-    historyEl.classList.add("disabled-ui"); // CSSでクリックを禁止にする
+    historyEl.classList.add("disabled-ui");
   } else {
     historyEl.classList.remove("disabled-ui");
-    // ロック解除時、画像が1枚以上あれば修正ボタンを使用可能に戻す
     if(history.length > 0 && currentIndex >= 0) {
       editBtn.disabled = false;
     }
@@ -288,7 +301,6 @@ async function generateImage(){
     return;
   }
 
-  // UIをロック
   setUIRocking(true);
 
   try{
@@ -308,8 +320,7 @@ async function generateImage(){
         body:JSON.stringify({
           model:"gpt-image-1", 
           prompt:fullPrompt,
-          size:"1024x1024",
-          response_format: "b64_json"
+          size:"1024x1024" // response_format パラメータを削除
         })
       }
     );
@@ -319,12 +330,15 @@ async function generateImage(){
       throw new Error(JSON.stringify(data));
     }
 
-    const originalB64 = data.data[0].b64_json;
-    const originalDataUrl = base64ToDataUrl(originalB64);
+    // 返ってきたURLから、高解像度(1024px)のDataURLを生成
+    const originalImageUrl = data.data[0].url;
+    const originalDataUrl = await imageUrlToDataUrl1024(originalImageUrl);
     
+    // 表示・ストレージ用に512pxにリサイズ
     const resizedImage = await resizeImage(originalDataUrl, 512);
     
-    addToHistory(originalB64, resizedImage, prompt);
+    // 履歴とメモリに追加
+    addToHistory(originalDataUrl, resizedImage, prompt);
     showImage(resizedImage);
 
     setStatus("生成完了");
@@ -333,7 +347,6 @@ async function generateImage(){
     setStatus(e.message);
   }
   
-  // UIのロックを解除
   setUIRocking(false);
 }
 
@@ -344,7 +357,6 @@ async function editImage(){
     return;
   }
 
-  // UIをロック
   setUIRocking(true);
 
   try{
@@ -360,8 +372,9 @@ ${BASE_PROMPT}
 現在の画像をベースに編集する。変更箇所以外はできるだけ維持する。`;
 
     let blob;
+    // メモリキャッシュに1024pxデータがあればそれを使う
     if (originalImageCache[currentIndex]) {
-      blob = await dataUrlToBlob(base64ToDataUrl(originalImageCache[currentIndex]));
+      blob = await dataUrlToBlob(originalImageCache[currentIndex]);
     } else {
       blob = await dataUrlToBlob(item.image);
     }
@@ -385,11 +398,12 @@ ${BASE_PROMPT}
       throw new Error(JSON.stringify(data));
     }
 
-    const newOriginalB64 = data.data[0].b64_json;
-    const originalDataUrl = base64ToDataUrl(newOriginalB64);
-    const resizedImage = await resizeImage(originalDataUrl, 512);
+    // 修正APIは元々URLを返す仕様なので、こちらも1024pxのデータに変換
+    const newOriginalUrl = data.data[0].url;
+    const newOriginalDataUrl = await imageUrlToDataUrl1024(newOriginalUrl);
+    const resizedImage = await resizeImage(newOriginalDataUrl, 512);
     
-    addToHistory(newOriginalB64, resizedImage, originalPrompt);
+    addToHistory(newOriginalDataUrl, resizedImage, originalPrompt);
     showImage(resizedImage);
 
     setStatus("修正完了");
@@ -398,7 +412,6 @@ ${BASE_PROMPT}
     setStatus(e.message);
   }
   
-  // UIのロックを解除
   setUIRocking(false);
 }
 
