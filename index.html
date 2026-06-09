@@ -60,7 +60,6 @@ img{
 .thumb-item img.active{
   border-color:white;
 }
-
 button:disabled{
   background:#ccc;
   cursor:not-allowed;
@@ -278,25 +277,22 @@ async function resizeImage(dataUrl, size = 512){
   });
 }
   
+
 function setUIRocking(isLock){
 
   generateBtn.disabled = isLock;
   editBtn.disabled = isLock;
 
   if(isLock){
-
     historyEl.classList.add("disabled-ui");
-
   }else{
-
     historyEl.classList.remove("disabled-ui");
 
     if(history.length > 0 && currentIndex >= 0){
-      editBtn.disabled = false;
+      setUIRocking(false);
     }
   }
 }
-
 
 async function generateImage(){
 
@@ -358,7 +354,7 @@ async function generateImage(){
 
 
 
-    editBtn.disabled = false;
+    setUIRocking(false);
 
     setStatus("生成完了");
 
@@ -366,9 +362,7 @@ async function generateImage(){
     setStatus(e.message);
   }
 
-  }finally{
-    setUIRocking(false);
-  }
+  setUIRocking(false);
 }
 
 async function editImage(){
@@ -451,9 +445,7 @@ ${editText}
     setStatus(e.message);
   }
 
-  }finally{
-    setUIRocking(false);
-  }
+  setUIRocking(false);
 }
 
 window.onload = ()=>{
@@ -478,7 +470,7 @@ window.onload = ()=>{
 
     showImage(history[currentIndex].image);
 
-    editBtn.disabled = false;
+    setUIRocking(false);
 
     setStatus("履歴を復元しました");
   }
