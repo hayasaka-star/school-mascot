@@ -222,7 +222,7 @@ function renderHistory(){
         showImage(history[currentIndex].image);
       }else{
         resultEl.innerHTML = "まだ画像はありません";
-        setUIRocking(true);
+        editBtn.disabled = true;
       }
     };
 
@@ -281,15 +281,17 @@ async function resizeImage(dataUrl, size = 512){
 function setUIRocking(isLock){
 
   generateBtn.disabled = isLock;
-  editBtn.disabled = isLock;
 
   if(isLock){
+    editBtn.disabled = true;
     historyEl.classList.add("disabled-ui");
   }else{
     historyEl.classList.remove("disabled-ui");
 
     if(history.length > 0 && currentIndex >= 0){
-      setUIRocking(false);
+      editBtn.disabled = false;
+    }else{
+      editBtn.disabled = true;
     }
   }
 }
