@@ -60,6 +60,21 @@ img{
 .thumb-item img.active{
   border-color:white;
 }
+
+button:disabled{
+  background:#ccc;
+  cursor:not-allowed;
+  opacity:0.6;
+}
+
+/* 通信中に履歴を操作できなくする */
+.thumbs.disabled-ui .thumb-item img,
+.thumbs.disabled-ui .delete-btn{
+  cursor:not-allowed;
+  pointer-events:none;
+  opacity:0.5;
+}
+
 .delete-btn{
   position:absolute;
   top:-5px;
@@ -208,7 +223,7 @@ function renderHistory(){
         showImage(history[currentIndex].image);
       }else{
         resultEl.innerHTML = "まだ画像はありません";
-        editBtn.disabled = true;
+        setUIRocking(true);
       }
     };
 
@@ -263,6 +278,26 @@ async function resizeImage(dataUrl, size = 512){
   });
 }
   
+function setUIRocking(isLock){
+
+  generateBtn.disabled = isLock;
+  editBtn.disabled = isLock;
+
+  if(isLock){
+
+    historyEl.classList.add("disabled-ui");
+
+  }else{
+
+    historyEl.classList.remove("disabled-ui");
+
+    if(history.length > 0 && currentIndex >= 0){
+      editBtn.disabled = false;
+    }
+  }
+}
+
+
 async function generateImage(){
 
   const apiKey = apiKeyEl.value.trim();
@@ -272,7 +307,7 @@ async function generateImage(){
     return;
   }
 
-  generateBtn.disabled = true;
+  setUIRocking(true);
 
   try{
 
@@ -331,7 +366,9 @@ async function generateImage(){
     setStatus(e.message);
   }
 
-  generateBtn.disabled = false;
+  }finally{
+    setUIRocking(false);
+  }
 }
 
 async function editImage(){
@@ -343,7 +380,7 @@ async function editImage(){
     return;
   }
 
-  editBtn.disabled = true;
+  setUIRocking(true);
 
   try{
 
@@ -414,7 +451,9 @@ ${editText}
     setStatus(e.message);
   }
 
-  editBtn.disabled = false;
+  }finally{
+    setUIRocking(false);
+  }
 }
 
 window.onload = ()=>{
