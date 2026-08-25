@@ -326,7 +326,7 @@ async function generateImage(){
           "Authorization":"Bearer " + apiKey
         },
         body:JSON.stringify({
-          model:"gpt-image-1",
+          model:"gpt-image-2",
           prompt:fullPrompt,
           size:"1024x1024"
         })
@@ -407,7 +407,7 @@ ${editText}
 
     const form = new FormData();
 
-    form.append("model","gpt-image-1");
+    form.append("model","gpt-image-2");
     form.append("prompt",finalPrompt);
     form.append("image",blob,"image.png");
 
